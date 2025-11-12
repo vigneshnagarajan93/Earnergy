@@ -18,7 +18,7 @@ Earnergy is a Jetpack Compose Android app that turns your focus time into potent
 
 ## Getting started
 
-1. Ensure you have Android Studio Jellyfish (or newer) and a JDK 21+ installed (JDK 25 works as well). Point `JAVA_HOME` to that JDK so Gradle can compile using Java 21 compatibility.
+1. Ensure you have Android Studio Jellyfish (or newer) and a local JDK 25 installed. Point `JAVA_HOME` to that JDK so Gradle picks it up for compilation while still targeting Java 21 bytecode for Android.
 2. Open the project in Android Studio and let Gradle sync complete.
 3. Run the `app` configuration on a device/emulator with API level 26 or higher.
 4. On first launch, grant Usage Access permission when prompted by the onboarding screen, then refresh the dashboard.

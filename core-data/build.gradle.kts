@@ -1,3 +1,7 @@
+import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.jvm.toolchain.JavaToolchainService
+
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
@@ -25,6 +29,16 @@ android {
     kotlinOptions {
         jvmTarget = "21"
     }
+}
+
+val javaToolchains = project.extensions.getByType<JavaToolchainService>()
+
+tasks.withType<JavaCompile>().configureEach {
+    javaCompiler.set(
+        javaToolchains.compilerFor {
+            languageVersion.set(JavaLanguageVersion.of(25))
+        }
+    )
 }
 dependencies {
     implementation(projects.coreDomain)
