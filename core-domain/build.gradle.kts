@@ -14,5 +14,5 @@ kotlin {
         val jvmMain by getting
     }
 
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
