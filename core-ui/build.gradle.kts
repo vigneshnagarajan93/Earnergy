@@ -29,11 +29,6 @@ android {
         jvmTarget = "21"
     }
 }
-
-kotlin {
-    jvmToolchain(21)
-}
-
 dependencies {
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.material3)

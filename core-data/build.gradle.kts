@@ -26,11 +26,6 @@ android {
         jvmTarget = "21"
     }
 }
-
-kotlin {
-    jvmToolchain(21)
-}
-
 dependencies {
     implementation(projects.coreDomain)
 

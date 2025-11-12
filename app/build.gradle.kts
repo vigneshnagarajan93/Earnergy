@@ -41,11 +41,6 @@ android {
         }
     }
 }
-
-kotlin {
-    jvmToolchain(21)
-}
-
 dependencies {
     implementation(projects.coreDomain)
     implementation(projects.coreData)
