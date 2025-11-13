@@ -1,5 +1,4 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinJvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -8,7 +7,13 @@ plugins {
 kotlin {
     jvmToolchain(21)
 
-    jvm()
+    jvm {
+        compilations.configureEach {
+            compilerOptions {
+                jvmTarget.set(JvmTarget.JVM_21)
+            }
+        }
+    }
 
     sourceSets {
         val commonMain by getting {
@@ -17,13 +22,5 @@ kotlin {
             }
         }
         val jvmMain by getting
-    }
-
-    targets.withType<KotlinJvmTarget>().configureEach {
-        compilations.configureEach {
-            compilerOptions {
-                jvmTarget.set(JvmTarget.JVM_21)
-            }
-        }
     }
 }
