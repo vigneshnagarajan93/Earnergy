@@ -45,6 +45,10 @@ class DashboardViewModel @Inject constructor(
         refreshNow()
     }
 
+    fun refresh() {
+        refreshNow()
+    }
+
     fun refreshNow() {
         viewModelScope.launch(ioDispatcher) {
             _uiState.update { it.copy(isRefreshing = true) }

@@ -32,11 +32,11 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun onHourlyRateChange(value: String) {
+    fun onHourlyRateChanged(value: String) {
         _uiState.update { it.copy(hourlyRateInput = value) }
     }
 
-    fun saveRate() {
+    fun onSaveClicked() {
         val input = _uiState.value.hourlyRateInput.trim()
         val value = input.toDoubleOrNull()
         if (value == null || value < 0) {
