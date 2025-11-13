@@ -39,7 +39,7 @@ val javaToolchains = project.extensions.getByType<JavaToolchainService>()
 tasks.withType<JavaCompile>().configureEach {
     javaCompiler.set(
         javaToolchains.compilerFor {
-            languageVersion.set(JavaLanguageVersion.of(25))
+            languageVersion.set(JavaLanguageVersion.of(21))
         }
     )
 }
