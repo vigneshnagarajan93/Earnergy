@@ -3,9 +3,8 @@ package com.earnergy
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.Surface
 import androidx.compose.material3.MaterialTheme
-import com.earnergy.navigation.EarnergyNavHost
+import androidx.compose.material3.Surface
 import com.earnergy.core.ui.theme.EarnergyTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -16,7 +15,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             EarnergyTheme {
                 Surface(color = MaterialTheme.colorScheme.background) {
-                    EarnergyNavHost()
+                    EarnergyApp()
                 }
             }
         }

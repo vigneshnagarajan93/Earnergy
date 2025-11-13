@@ -20,9 +20,11 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun DashboardScreen(
-    state: DashboardUiState,
-    onRefresh: () -> Unit,
-    onOpenSettings: () -> Unit
+    uiState: DashboardUiState,
+    onOpenAppsClassification: () -> Unit,
+    onOpenCharts: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onRefresh: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -35,10 +37,10 @@ fun DashboardScreen(
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
-        UsageSummaryCard(state)
-        EarningsCard(state)
+        UsageSummaryCard(uiState)
+        EarningsCard(uiState)
         Spacer(modifier = Modifier.weight(1f))
-        if (state.isRefreshing) {
+        if (uiState.isRefreshing) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center
@@ -51,6 +53,18 @@ fun DashboardScreen(
             onClick = onRefresh
         ) {
             Text("Refresh Usage")
+        }
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onOpenAppsClassification
+        ) {
+            Text("Manage App Roles")
+        }
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onOpenCharts
+        ) {
+            Text("View Charts")
         }
         Button(
             modifier = Modifier.fillMaxWidth(),
