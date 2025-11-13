@@ -8,7 +8,13 @@ plugins {
 kotlin {
     jvmToolchain(21)
 
-    jvm()
+    jvm {
+        compilations.configureEach {
+            compilerOptions {
+                jvmTarget.set(JvmTarget.JVM_21)
+            }
+        }
+    }
 
     sourceSets {
         val commonMain by getting {
