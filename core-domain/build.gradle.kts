@@ -1,4 +1,4 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -8,10 +8,8 @@ kotlin {
     jvmToolchain(21)
 
     jvm {
-        compilations.configureEach {
-            compilerOptions {
-                jvmTarget.set(JvmTarget.JVM_21)
-            }
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_21)
         }
     }
 
@@ -23,8 +21,4 @@ kotlin {
         }
         val jvmMain by getting
     }
-}
-
-tasks.withType<KotlinJvmCompile>().configureEach {
-    kotlinOptions.jvmTarget = "21"
 }
