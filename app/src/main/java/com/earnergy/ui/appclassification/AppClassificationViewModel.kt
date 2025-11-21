@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class AppClassificationViewModel @Inject constructor() : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AppClassificationUiState())
+    private val _uiState = MutableStateFlow(AppClassificationUiState(isLoading = true))
     val uiState: StateFlow<AppClassificationUiState> = _uiState.asStateFlow()
 
     init {
@@ -25,19 +25,23 @@ class AppClassificationViewModel @Inject constructor() : ViewModel() {
                         AppClassificationItem(
                             appName = "Earnergy",
                             packageName = "com.earnergy",
+                            todayMinutes = 95,
                             role = AppRole.INVESTED
                         ),
                         AppClassificationItem(
                             appName = "Social Feed",
                             packageName = "com.example.social",
+                            todayMinutes = 45,
                             role = AppRole.DRIFT
                         ),
                         AppClassificationItem(
                             appName = "Casual Game",
                             packageName = "com.example.game",
+                            todayMinutes = 20,
                             role = AppRole.IGNORED
                         )
-                    )
+                    ),
+                    isLoading = false
                 )
             }
         }
@@ -58,18 +62,3 @@ class AppClassificationViewModel @Inject constructor() : ViewModel() {
     }
 }
 
-data class AppClassificationUiState(
-    val apps: List<AppClassificationItem> = emptyList()
-)
-
-data class AppClassificationItem(
-    val appName: String,
-    val packageName: String,
-    val role: AppRole
-)
-
-enum class AppRole {
-    INVESTED,
-    DRIFT,
-    IGNORED
-}

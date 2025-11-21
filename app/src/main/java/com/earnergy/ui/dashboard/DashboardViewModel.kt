@@ -6,10 +6,8 @@ import com.earnergy.core.data.repository.UsageRepository
 import com.earnergy.domain.calculation.EarningCalculator
 import com.earnergy.domain.model.DaySummary
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.text.NumberFormat
 import java.time.Clock
 import java.time.LocalDate
-import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -27,11 +25,6 @@ class DashboardViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val todayEpochDay: Long = LocalDate.now(clock).toEpochDay()
-    private val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US)
-
-    private val _uiState = MutableStateFlow(DashboardUiState())
-    val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
-
     private val productivePackages = setOf(
         "com.google.android.apps.docs",
         "com.google.android.apps.keep",
@@ -39,6 +32,9 @@ class DashboardViewModel @Inject constructor(
         "com.notion.android",
         "com.slack"
     )
+
+    private val _uiState = MutableStateFlow(DashboardUiState(isLoading = true))
+    val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
     init {
         observeDaySummary()
@@ -51,11 +47,13 @@ class DashboardViewModel @Inject constructor(
 
     fun refreshNow() {
         viewModelScope.launch(ioDispatcher) {
-            _uiState.update { it.copy(isRefreshing = true) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
                 usageRepository.refreshToday()
+            } catch (throwable: Throwable) {
+                _uiState.update { it.copy(errorMessage = throwable.message ?: "Unable to refresh") }
             } finally {
-                _uiState.update { it.copy(isRefreshing = false) }
+                _uiState.update { it.copy(isLoading = false) }
             }
         }
     }
@@ -63,38 +61,20 @@ class DashboardViewModel @Inject constructor(
     private fun observeDaySummary() {
         viewModelScope.launch {
             usageRepository.observeDaySummary(todayEpochDay).collect { summary ->
-                _uiState.update { it.updateFromSummary(summary, currencyFormatter, productivePackages) }
+                _uiState.update {
+                    it.withSummary(summary).copy(isLoading = false, errorMessage = null)
+                }
             }
         }
     }
-}
 
-data class DashboardUiState(
-    val productiveTime: String = "00:00",
-    val passiveTime: String = "00:00",
-    val potentialEarnings: String = "\$0.00",
-    val potentialLoss: String = "\$0.00",
-    val hourlyRate: Double = 25.0,
-    val isRefreshing: Boolean = false
-) {
-    fun updateFromSummary(
-        summary: DaySummary,
-        formatter: NumberFormat,
-        productivePackages: Set<String>
-    ): DashboardUiState {
+    private fun DashboardUiState.withSummary(summary: DaySummary): DashboardUiState {
         val impact = EarningCalculator.computeImpact(summary, productivePackages)
         return copy(
-            productiveTime = formatDuration(impact.productiveSeconds),
-            passiveTime = formatDuration(impact.passiveSeconds),
-            potentialEarnings = formatter.format(impact.potentialEarningsUsd),
-            potentialLoss = formatter.format(impact.potentialLossUsd),
-            hourlyRate = summary.hourlyRate
+            investedMinutes = (impact.productiveSeconds / 60).toInt(),
+            driftMinutes = (impact.passiveSeconds / 60).toInt(),
+            valueOfInvestedTime = impact.potentialEarningsUsd,
+            costOfDriftTime = impact.potentialLossUsd
         )
-    }
-
-    private fun formatDuration(seconds: Long): String {
-        val hours = seconds / 3600
-        val minutes = (seconds % 3600) / 60
-        return String.format(Locale.getDefault(), "%02d:%02d", hours, minutes)
     }
 }
