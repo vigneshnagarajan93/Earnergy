@@ -11,5 +11,6 @@ data class AppUsageEntity(
     val packageName: String,
     val displayName: String,
     val category: AppCategory,
-    val totalSeconds: Long
+    val totalSeconds: Long,
+    val isSystemApp: Boolean
 )

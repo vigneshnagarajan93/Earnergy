@@ -6,13 +6,15 @@ import com.earnergy.domain.model.MoneyImpact
 import kotlin.math.round
 
 object EarningCalculator {
-    fun computeImpact(daySummary: DaySummary, productivePackages: Set<String>): MoneyImpact {
-        val totalSeconds = daySummary.usages.sumOf { it.totalForeground.inWholeSeconds }
+    fun computeImpact(daySummary: DaySummary): MoneyImpact {
         val productiveSeconds = daySummary.usages
-            .filter { it.packageName in productivePackages || it.category == AppCategory.PRODUCTIVE }
+            .filter { it.role == com.earnergy.domain.model.AppRole.INVESTED }
             .sumOf { it.totalForeground.inWholeSeconds }
 
-        val passiveSeconds = (totalSeconds - productiveSeconds).coerceAtLeast(0)
+        val passiveSeconds = daySummary.usages
+            .filter { it.role == com.earnergy.domain.model.AppRole.DRIFT }
+            .sumOf { it.totalForeground.inWholeSeconds }
+
         val productiveHours = productiveSeconds / 3600.0
         val passiveHours = passiveSeconds / 3600.0
 

@@ -6,5 +6,7 @@ data class AppUsage(
     val packageName: String,
     val displayName: String,
     val category: AppCategory,
-    val totalForeground: Duration
+    val totalForeground: Duration,
+    val role: AppRole = AppRole.IGNORED,
+    val isSystemApp: Boolean = false
 )

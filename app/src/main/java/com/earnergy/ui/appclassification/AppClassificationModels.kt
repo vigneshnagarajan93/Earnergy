@@ -1,19 +1,15 @@
 package com.earnergy.ui.appclassification
 
-import androidx.compose.ui.graphics.painter.Painter
 
-enum class AppRole(val label: String) {
-    INVESTED("Invested"),
-    DRIFT("Drift"),
-    IGNORED("Ignored")
-}
+
+import com.earnergy.domain.model.AppRole
 
 data class AppClassificationItem(
     val appName: String,
     val packageName: String,
-    val icon: Painter? = null,
     val todayMinutes: Int = 0,
-    val role: AppRole
+    val role: AppRole,
+    val isSystemApp: Boolean = false
 )
 
 data class AppClassificationUiState(

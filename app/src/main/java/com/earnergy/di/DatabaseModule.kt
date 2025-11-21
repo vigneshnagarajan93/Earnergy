@@ -11,6 +11,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
+import com.earnergy.core.data.local.AppConfigDao
+
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
@@ -22,9 +24,14 @@ object DatabaseModule {
             context,
             AppUsageDatabase::class.java,
             "app_usage.db"
-        ).build()
+        )
+        .fallbackToDestructiveMigration()
+        .build()
     }
 
     @Provides
     fun provideAppUsageDao(database: AppUsageDatabase): AppUsageDao = database.appUsageDao()
+
+    @Provides
+    fun provideAppConfigDao(database: AppUsageDatabase): AppConfigDao = database.appConfigDao()
 }

@@ -16,10 +16,15 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 
+import com.earnergy.core.data.local.AppConfigDao
+import com.earnergy.core.data.local.AppConfigEntity
+import com.earnergy.domain.model.AppRole
+
 @Singleton
 class UsageRepository @Inject constructor(
     private val usageStatsDataSource: UsageStatsDataSource,
     private val appUsageDao: AppUsageDao,
+    private val appConfigDao: AppConfigDao,
     private val settingsDataStore: SettingsDataStore,
     private val clock: Clock = Clock.systemDefaultZone()
 ) {
@@ -32,7 +37,8 @@ class UsageRepository @Inject constructor(
                 packageName = usage.packageName,
                 displayName = usage.displayName,
                 category = usage.category,
-                totalSeconds = usage.totalForeground.inWholeSeconds
+                totalSeconds = usage.totalForeground.inWholeSeconds,
+                isSystemApp = usage.isSystemApp
             )
         }
         appUsageDao.replaceForDay(todayEpochDay, entities)
@@ -41,11 +47,13 @@ class UsageRepository @Inject constructor(
     fun observeDaySummary(epochDay: Long): Flow<DaySummary> {
         return combine(
             appUsageDao.observeForDay(epochDay),
+            appConfigDao.observeAll(),
             settingsDataStore.hourlyRate
-        ) { entities, hourlyRate ->
+        ) { usageEntities, configEntities, hourlyRate ->
+            val configMap = configEntities.associate { it.packageName to it.role }
             DaySummary(
                 dateEpochDay = epochDay,
-                usages = entities.map { it.toDomain() },
+                usages = usageEntities.map { it.toDomain(configMap[it.packageName]) },
                 hourlyRate = hourlyRate,
                 energyStart = null,
                 energyEnd = null
@@ -57,19 +65,39 @@ class UsageRepository @Inject constructor(
         val entities = appUsageDao.getForDay(epochDay)
         if (entities.isEmpty()) return null
         val hourlyRate = settingsDataStore.hourlyRate.first()
+        
+        val allConfigs = appConfigDao.observeAll().first()
+        val configMap = allConfigs.associate { it.packageName to it.role }
+
         return DaySummary(
             dateEpochDay = epochDay,
-            usages = entities.map { it.toDomain() },
+            usages = entities.map { it.toDomain(configMap[it.packageName]) },
             hourlyRate = hourlyRate,
             energyStart = null,
             energyEnd = null
         )
     }
 
-    private fun AppUsageEntity.toDomain(): AppUsage = AppUsage(
-        packageName = packageName,
-        displayName = displayName,
-        category = category,
-        totalForeground = totalSeconds.seconds
-    )
+    suspend fun updateAppRole(packageName: String, role: AppRole) {
+        appConfigDao.insert(AppConfigEntity(packageName, role))
+    }
+
+    private fun AppUsageEntity.toDomain(configRole: AppRole?): AppUsage {
+        val effectiveRole = configRole ?: when {
+            isSystemApp -> AppRole.IGNORED
+            category == com.earnergy.domain.model.AppCategory.PRODUCTIVE -> AppRole.INVESTED
+            category == com.earnergy.domain.model.AppCategory.SOCIAL || 
+            category == com.earnergy.domain.model.AppCategory.ENTERTAINMENT -> AppRole.DRIFT
+            else -> AppRole.IGNORED
+        }
+        
+        return AppUsage(
+            packageName = packageName,
+            displayName = displayName,
+            category = category,
+            totalForeground = totalSeconds.seconds,
+            role = effectiveRole,
+            isSystemApp = isSystemApp
+        )
+    }
 }

@@ -25,13 +25,7 @@ class DashboardViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val todayEpochDay: Long = LocalDate.now(clock).toEpochDay()
-    private val productivePackages = setOf(
-        "com.google.android.apps.docs",
-        "com.google.android.apps.keep",
-        "com.microsoft.todos",
-        "com.notion.android",
-        "com.slack"
-    )
+
 
     private val _uiState = MutableStateFlow(DashboardUiState(isLoading = true))
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
@@ -69,7 +63,7 @@ class DashboardViewModel @Inject constructor(
     }
 
     private fun DashboardUiState.withSummary(summary: DaySummary): DashboardUiState {
-        val impact = EarningCalculator.computeImpact(summary, productivePackages)
+        val impact = EarningCalculator.computeImpact(summary)
         return copy(
             investedMinutes = (impact.productiveSeconds / 60).toInt(),
             driftMinutes = (impact.passiveSeconds / 60).toInt(),

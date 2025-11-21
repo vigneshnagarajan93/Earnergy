@@ -34,24 +34,28 @@ class UsageStatsDataSource @Inject constructor(
             .groupBy { it.packageName }
             .map { (packageName, entries) ->
                 val totalSeconds = entries.sumOf { (it.totalTimeInForeground / 1000L).coerceAtLeast(0) }
-                val displayName = resolveLabel(packageName)
+                val (displayName, isSystem) = resolveLabelAndSystemStatus(packageName)
                 val category = guessCategory(packageName, displayName)
                 AppUsage(
                     packageName = packageName,
                     displayName = displayName,
                     category = category,
-                    totalForeground = totalSeconds.seconds
+                    totalForeground = totalSeconds.seconds,
+                    isSystemApp = isSystem
                 )
             }
             .sortedByDescending { it.totalForeground }
     }
 
-    private fun resolveLabel(packageName: String): String {
+    private fun resolveLabelAndSystemStatus(packageName: String): Pair<String, Boolean> {
         return try {
             val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
-            packageManager.getApplicationLabel(applicationInfo)?.toString() ?: packageName
+            val label = packageManager.getApplicationLabel(applicationInfo)?.toString() ?: packageName
+            val isSystem = (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0 ||
+                    (applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+            label to isSystem
         } catch (_: PackageManager.NameNotFoundException) {
-            packageName
+            packageName to false
         }
     }
 
