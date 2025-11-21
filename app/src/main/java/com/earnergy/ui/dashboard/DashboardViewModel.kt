@@ -68,7 +68,8 @@ class DashboardViewModel @Inject constructor(
             investedMinutes = (impact.productiveSeconds / 60).toInt(),
             driftMinutes = (impact.passiveSeconds / 60).toInt(),
             valueOfInvestedTime = impact.potentialEarningsUsd,
-            costOfDriftTime = impact.potentialLossUsd
+            costOfDriftTime = impact.potentialLossUsd,
+            netValue = impact.potentialEarningsUsd - impact.potentialLossUsd
         )
     }
 }

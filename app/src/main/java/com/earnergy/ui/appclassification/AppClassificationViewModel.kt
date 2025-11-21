@@ -49,5 +49,9 @@ class AppClassificationViewModel @Inject constructor(
             usageRepository.updateAppRole(packageName, newRole)
         }
     }
+    
+    fun onSearchQueryChanged(query: String) {
+        _uiState.update { it.copy(searchQuery = query) }
+    }
 }
 

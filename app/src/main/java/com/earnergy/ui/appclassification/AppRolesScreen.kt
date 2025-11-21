@@ -12,6 +12,7 @@ fun AppRolesScreen(onBack: () -> Unit) {
     AppClassificationScreen(
         uiState = uiState,
         onRoleChanged = viewModel::onRoleChanged,
+        onSearchQueryChanged = viewModel::onSearchQueryChanged,
         onBack = onBack
     )
 }

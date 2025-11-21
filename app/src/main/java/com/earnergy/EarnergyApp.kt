@@ -31,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -81,6 +82,20 @@ fun EarnergyApp() {
                         composable("dashboard") {
                             val viewModel: DashboardViewModel = hiltViewModel()
                             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+                            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+                            
+                            androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+                                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                                    if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                                        viewModel.refresh()
+                                    }
+                                }
+                                lifecycleOwner.lifecycle.addObserver(observer)
+                                onDispose {
+                                    lifecycleOwner.lifecycle.removeObserver(observer)
+                                }
+                            }
+                            
                             DashboardScreen(
                                 uiState = uiState,
                                 onOpenApps = { navController.navigate("apps") },
@@ -123,63 +138,67 @@ fun EarnergyApp() {
 private fun EarnergyBottomBar(navController: NavHostController) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.hierarchy?.firstOrNull()?.route ?: "dashboard"
-    GlassSurface(
+    
+    Box(
         modifier = Modifier
             .fillMaxWidth()
+            .background(Color(0xFF0B0F19).copy(alpha = 0.95f))
             .padding(horizontal = 16.dp, vertical = 12.dp)
-            .height(80.dp),
-        shape = RoundedCornerShape(32.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-                navItems.forEach { item ->
-                    val selected = currentRoute == item.route
-                    val gradient = Brush.horizontalGradient(
-                        colors = if (selected) listOf(Color(0xFF4C6FFF), Color(0xFF8B5CF6)) else listOf(Color(0xFFFFFF00), Color(0xFFFFB300), Color(0xFFFF7A00))
-                    )
-                   Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(gradient)
-                            .clickable {
-                                if (currentRoute != item.route) {
-                                    navController.navigate(item.route) {
-                                        popUpTo(navController.graph.findStartDestination().id) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
+            navItems.forEach { item ->
+                val selected = currentRoute == item.route
+                val gradient = if (selected) {
+                    Brush.horizontalGradient(listOf(Color(0xFF4C6FFF), Color(0xFF8B5CF6)))
+                } else {
+                    Brush.horizontalGradient(listOf(Color.Transparent, Color.Transparent))
+                }
+                
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(gradient)
+                        .clickable {
+                            if (currentRoute != item.route) {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
                                     }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
                             }
-                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                        }
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            val tintColor = if (selected) Color.White else Color.White.copy(alpha = 0.65f)
-                            Icon(
-                                imageVector = item.icon,
-                                contentDescription = item.label,
-                                tint = tintColor
+                        Icon(
+                            imageVector = item.icon,
+                            contentDescription = item.label,
+                            tint = if (selected) Color.White else Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        if (selected) {
+                            Text(
+                                text = item.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold
                             )
-                            if (selected) {
-                                Text(
-                                    text = item.label,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White
-                                )
-                            }
                         }
                     }
                 }
             }
         }
     }
+}
 
 private data class NavItem(val route: String, val label: String, val icon: ImageVector)
 

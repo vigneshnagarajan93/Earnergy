@@ -1,8 +1,13 @@
 package com.earnergy.ui.appclassification
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import com.earnergy.domain.model.AppRole
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,10 +18,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.sharp.ArrowBack
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -28,35 +35,45 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.earnergy.ui.common.GlassChip
-import com.earnergy.ui.common.GlassSurface
+import androidx.compose.ui.unit.sp
 import android.graphics.drawable.Drawable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.rememberAsyncImagePainter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-
-
 @Composable
 fun AppClassificationScreen(
     uiState: AppClassificationUiState,
     onRoleChanged: (packageName: String, newRole: AppRole) -> Unit,
+    onSearchQueryChanged: (String) -> Unit,
     onBack: () -> Unit
 ) {
-    var selectedTab by remember { mutableStateOf(AppClassificationTab.All) }
-    val filteredApps = remember(uiState.apps, selectedTab) {
-        filterApps(uiState.apps, selectedTab)
+    val filteredApps = remember(uiState.apps, uiState.searchQuery) {
+        if (uiState.searchQuery.isBlank()) {
+            uiState.apps
+        } else {
+            uiState.apps.filter {
+                it.appName.contains(uiState.searchQuery, ignoreCase = true)
+            }
+        }
     }
     
-    val (userApps, systemApps) = remember(filteredApps) {
-        filteredApps.partition { !it.isSystemApp }
+    val (unclassified, classified) = remember(filteredApps) {
+        filteredApps.partition { it.role == AppRole.IGNORED && !it.isSystemApp }
     }
 
     Box(
@@ -64,7 +81,7 @@ fun AppClassificationScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(Color(0xFF03040A), Color(0xFF10162A))
+                    colors = listOf(Color(0xFF0A0E1A), Color(0xFF1A1F2E))
                 )
             )
     ) {
@@ -74,37 +91,73 @@ fun AppClassificationScreen(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            GlassSurface {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Sharp.ArrowBack, contentDescription = "Back", tint = Color.White)
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Sharp.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White
+                        )
                     }
-                    Text(
-                        text = "App roles",
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
+                    Column {
+                        Text(
+                            text = "Classify Apps",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                        Text(
+                            text = "${unclassified.size} apps need classification",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+                        )
+                    }
                 }
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                AppClassificationTab.values().forEach { tab ->
-                    GlassChip(
-                        label = tab.title,
-                        selected = tab == selectedTab,
-                        selectedColor = when (tab) {
-                            AppClassificationTab.Invested -> Color(0xFFFCD34D)
-                            AppClassificationTab.Drift -> Color(0xFFF87171)
-                            AppClassificationTab.All -> Color.White
-                        },
-                        onClick = { selectedTab = tab }
+            // Search Bar
+            PremiumCard {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = "Search",
+                        tint = Color.White.copy(alpha = 0.5f),
+                        modifier = Modifier.size(22.dp)
+                    )
+                    BasicTextField(
+                        value = uiState.searchQuery,
+                        onValueChange = onSearchQueryChanged,
+                        modifier = Modifier.weight(1f),
+                        textStyle = TextStyle(
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Normal
+                        ),
+                        cursorBrush = SolidColor(Color(0xFF6366F1)),
+                        decorationBox = { innerTextField ->
+                            if (uiState.searchQuery.isEmpty()) {
+                                Text(
+                                    text = "Search apps...",
+                                    color = Color.White.copy(alpha = 0.4f),
+                                    fontSize = 16.sp
+                                )
+                            }
+                            innerTextField()
+                        }
                     )
                 }
             }
@@ -124,22 +177,70 @@ fun AppClassificationScreen(
                 }
                 else -> {
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(userApps, key = { it.packageName }) { app ->
-                            AppItem(app, onRoleChanged)
+                        // Unclassified Section
+                        if (unclassified.isNotEmpty()) {
+                            item {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.padding(vertical = 8.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(Color(0xFFFBBF24))
+                                    )
+                                    Text(
+                                        text = "Needs Classification",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = "${unclassified.size}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFFFBBF24)
+                                    )
+                                }
+                            }
+                            items(unclassified, key = { it.packageName }) { app ->
+                                AppCard(app, onRoleChanged)
+                            }
                         }
                         
-                        if (systemApps.isNotEmpty()) {
+                        // Classified Section
+                        if (classified.isNotEmpty()) {
                             item {
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text(
-                                    text = "System Apps",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = Color.White.copy(alpha = 0.7f),
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     modifier = Modifier.padding(vertical = 8.dp)
-                                )
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(Color.White.copy(alpha = 0.5f))
+                                    )
+                                    Text(
+                                        text = "Classified",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color.White.copy(alpha = 0.7f)
+                                    )
+                                    Text(
+                                        text = "${classified.size}",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White.copy(alpha = 0.5f)
+                                    )
+                                }
                             }
-                            items(systemApps, key = { it.packageName }) { app ->
-                                AppItem(app, onRoleChanged)
+                            items(classified, key = { it.packageName }) { app ->
+                                AppCard(app, onRoleChanged)
                             }
                         }
                     }
@@ -150,70 +251,140 @@ fun AppClassificationScreen(
 }
 
 @Composable
-private fun AppItem(
+private fun PremiumCard(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                ambientColor = Color.Black.copy(alpha = 0.3f),
+                spotColor = Color.Black.copy(alpha = 0.3f)
+            )
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF1E2433),
+                        Color(0xFF181D2A)
+                    )
+                )
+            )
+    ) {
+        content()
+    }
+}
+
+@Composable
+private fun AppCard(
     app: AppClassificationItem,
     onRoleChanged: (packageName: String, newRole: AppRole) -> Unit
 ) {
-    GlassSurface(modifier = Modifier.fillMaxWidth()) {
+    PremiumCard {
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // App Info Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 AppIcon(packageName = app.packageName, appName = app.appName)
-                Column {
+                
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = app.appName,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
                         color = Color.White
                     )
                     Text(
                         text = formatMinutes(app.todayMinutes),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White
+                        fontWeight = FontWeight.Normal,
+                        color = Color.White.copy(alpha = 0.5f)
                     )
                 }
             }
+            
+            // Role Buttons Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                GlassChip(
+                RoleButton(
                     label = "Invested",
-                    selected = app.role == AppRole.INVESTED,
-                    selectedColor = Color(0xFFFCD34D),
-                    onClick = {
-                        if (app.role != AppRole.INVESTED) {
-                            onRoleChanged(app.packageName, AppRole.INVESTED)
-                        }
-                    }
+                    isSelected = app.role == AppRole.INVESTED,
+                    selectedGradient = listOf(Color(0xFF10B981), Color(0xFF059669)),
+                    onClick = { onRoleChanged(app.packageName, AppRole.INVESTED) },
+                    modifier = Modifier.weight(1f)
                 )
-                GlassChip(
+                RoleButton(
                     label = "Drift",
-                    selected = app.role == AppRole.DRIFT,
-                    selectedColor = Color(0xFFF87171),
-                    onClick = {
-                        if (app.role != AppRole.DRIFT) {
-                            onRoleChanged(app.packageName, AppRole.DRIFT)
-                        }
-                    }
+                    isSelected = app.role == AppRole.DRIFT,
+                    selectedGradient = listOf(Color(0xFFEF4444), Color(0xFFDC2626)),
+                    onClick = { onRoleChanged(app.packageName, AppRole.DRIFT) },
+                    modifier = Modifier.weight(1f)
                 )
-                GlassChip(
-                    label = "Ignored",
-                    selected = app.role == AppRole.IGNORED,
-                    selectedColor = Color.White,
-                    onClick = {
-                        if (app.role != AppRole.IGNORED) {
-                            onRoleChanged(app.packageName, AppRole.IGNORED)
-                        }
-                    }
+                RoleButton(
+                    label = "Ignore",
+                    isSelected = app.role == AppRole.IGNORED,
+                    selectedGradient = listOf(Color(0xFF6B7280), Color(0xFF4B5563)),
+                    onClick = { onRoleChanged(app.packageName, AppRole.IGNORED) },
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun RoleButton(
+    label: String,
+    isSelected: Boolean,
+    selectedGradient: List<Color>,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 1.0f else 0.95f,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f)
+    )
+    
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isSelected) Color.Transparent else Color(0xFF252B3A),
+        animationSpec = tween(durationMillis = 200)
+    )
+
+    Box(
+        modifier = modifier
+            .scale(scale)
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (isSelected) {
+                    Brush.horizontalGradient(selectedGradient)
+                } else {
+                    SolidColor(backgroundColor)
+                }
+            )
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp, horizontal = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f),
+            fontSize = 13.sp
+        )
     }
 }
 
@@ -232,27 +403,30 @@ private fun AppIcon(packageName: String, appName: String) {
         }
     }
 
-    if (icon != null) {
-        Image(
-            painter = rememberAsyncImagePainter(icon),
-            contentDescription = "$appName icon",
-            modifier = Modifier.size(40.dp)
-        )
-    } else {
-        Icon(
-            imageVector = Icons.Default.Apps,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(40.dp)
-        )
-    }
-}
-
-private fun filterApps(apps: List<AppClassificationItem>, tab: AppClassificationTab): List<AppClassificationItem> {
-    return when (tab) {
-        AppClassificationTab.All -> apps
-        AppClassificationTab.Invested -> apps.filter { it.role == AppRole.INVESTED }
-        AppClassificationTab.Drift -> apps.filter { it.role == AppRole.DRIFT }
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFF252B3A))
+    ) {
+        if (icon != null) {
+            Image(
+                painter = rememberAsyncImagePainter(icon),
+                contentDescription = "$appName icon",
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(12.dp))
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Default.Apps,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.4f),
+                modifier = Modifier
+                    .size(28.dp)
+                    .align(Alignment.Center)
+            )
+        }
     }
 }
 
@@ -260,10 +434,4 @@ private fun formatMinutes(minutes: Int): String {
     val hours = minutes / 60
     val remainingMinutes = minutes % 60
     return if (hours > 0) "${hours}h ${remainingMinutes}m" else "${remainingMinutes}m"
-}
-
-enum class AppClassificationTab(val title: String) {
-    All("All"),
-    Invested("Invested"),
-    Drift("Drift")
 }

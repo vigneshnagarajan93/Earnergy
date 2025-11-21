@@ -14,6 +14,7 @@ data class AppClassificationItem(
 
 data class AppClassificationUiState(
     val apps: List<AppClassificationItem> = emptyList(),
+    val searchQuery: String = "",
     val isLoading: Boolean = false,
     val errorMessage: String? = null
 )
