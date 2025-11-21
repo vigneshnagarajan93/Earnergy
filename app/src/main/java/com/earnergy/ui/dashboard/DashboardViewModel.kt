@@ -17,9 +17,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+import com.earnergy.core.data.local.AppSwitchEventDao
+import com.earnergy.core.data.local.AppSwitchEventEntity
+import com.earnergy.domain.calculation.FocusCalculator
+import com.earnergy.domain.model.AppSwitchEvent
+import kotlinx.coroutines.flow.combine
+
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val usageRepository: UsageRepository,
+    private val appSwitchEventDao: AppSwitchEventDao,
     private val clock: Clock,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
@@ -31,7 +38,7 @@ class DashboardViewModel @Inject constructor(
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
     init {
-        observeDaySummary()
+        observeData()
         refreshNow()
     }
 
@@ -52,15 +59,38 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    private fun observeDaySummary() {
+    private fun observeData() {
         viewModelScope.launch {
-            usageRepository.observeDaySummary(todayEpochDay).collect { summary ->
+            combine(
+                usageRepository.observeDaySummary(todayEpochDay),
+                appSwitchEventDao.observeForDay(todayEpochDay)
+            ) { summary, switchEntities ->
+                val switches = switchEntities.map { it.toDomain() }
+                val focusMetrics = FocusCalculator.computeFocusMetrics(
+                    usages = summary.usages,
+                    appSwitchEvents = switches,
+                    dateEpochDay = todayEpochDay
+                )
+                
+                Pair(summary, focusMetrics)
+            }.collect { (summary, focusMetrics) ->
                 _uiState.update {
-                    it.withSummary(summary).copy(isLoading = false, errorMessage = null)
+                    it.withSummary(summary).copy(
+                        focusMetrics = focusMetrics,
+                        isLoading = false, 
+                        errorMessage = null
+                    )
                 }
             }
         }
     }
+    
+    private fun AppSwitchEventEntity.toDomain() = AppSwitchEvent(
+        timestamp = timestamp,
+        fromPackage = fromPackage,
+        toPackage = toPackage,
+        dateEpochDay = dateEpochDay
+    )
 
     private fun DashboardUiState.withSummary(summary: DaySummary): DashboardUiState {
         val impact = EarningCalculator.computeImpact(summary)

@@ -18,13 +18,18 @@ import kotlinx.coroutines.flow.first
 
 import com.earnergy.core.data.local.AppConfigDao
 import com.earnergy.core.data.local.AppConfigEntity
+import com.earnergy.core.data.local.AppSwitchEventDao
 import com.earnergy.domain.model.AppRole
+import com.earnergy.domain.model.FocusTrend
+import com.earnergy.domain.model.AppSwitchEvent
+import com.earnergy.domain.calculation.FocusCalculator
 
 @Singleton
 class UsageRepository @Inject constructor(
     private val usageStatsDataSource: UsageStatsDataSource,
     private val appUsageDao: AppUsageDao,
     private val appConfigDao: AppConfigDao,
+    private val appSwitchEventDao: AppSwitchEventDao,
     private val settingsDataStore: SettingsDataStore,
     private val clock: Clock = Clock.systemDefaultZone()
 ) {
@@ -78,6 +83,39 @@ class UsageRepository @Inject constructor(
         )
     }
 
+    /**
+     * Load focus trends for a date range (typically a week).
+     * Returns a list of FocusTrend objects, one per day.
+     */
+    suspend fun loadWeeklyFocusTrends(startEpochDay: Long, endEpochDay: Long): List<FocusTrend> {
+        val trends = mutableListOf<FocusTrend>()
+        
+        for (day in startEpochDay..endEpochDay) {
+            val daySummary = loadDay(day)
+            val switchEvents = appSwitchEventDao.getForDay(day)
+            
+            if (daySummary != null && switchEvents.isNotEmpty()) {
+                val switches = switchEvents.map { it.toDomain() }
+                val focusMetrics = FocusCalculator.computeFocusMetrics(
+                    usages = daySummary.usages,
+                    appSwitchEvents = switches,
+                    dateEpochDay = day
+                )
+                
+                trends.add(
+                    FocusTrend(
+                        dateEpochDay = day,
+                        focusScore = focusMetrics.focusScore,
+                        appSwitchCount = focusMetrics.appSwitchCount,
+                        deepWorkMinutes = focusMetrics.totalDeepWorkMinutes
+                    )
+                )
+            }
+        }
+        
+        return trends
+    }
+
     suspend fun updateAppRole(packageName: String, role: AppRole) {
         appConfigDao.insert(AppConfigEntity(packageName, role))
     }
@@ -100,4 +138,11 @@ class UsageRepository @Inject constructor(
             isSystemApp = isSystemApp
         )
     }
+    
+    private fun com.earnergy.core.data.local.AppSwitchEventEntity.toDomain() = AppSwitchEvent(
+        timestamp = timestamp,
+        fromPackage = fromPackage,
+        toPackage = toPackage,
+        dateEpochDay = dateEpochDay
+    )
 }

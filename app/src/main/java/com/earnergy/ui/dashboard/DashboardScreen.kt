@@ -1,5 +1,6 @@
 package com.earnergy.ui.dashboard
 
+import androidx.compose.runtime.remember
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
@@ -29,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -53,6 +55,9 @@ fun DashboardScreen(
     onOpenSettings: () -> Unit,
     onRefresh: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val hasPermission = remember { com.earnergy.util.PermissionHelper.hasUsageStatsPermission(context) }
+    
     val scrollState = rememberScrollState()
     val netValue by animateFloatAsState(
         targetValue = uiState.netValue.toFloat(),
@@ -118,6 +123,43 @@ fun DashboardScreen(
                 )
             }
 
+            // Permission Prompt
+            if (!hasPermission) {
+                PremiumCard(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "⚠️ Permission Required",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFBBF24)
+                        )
+                        Text(
+                            text = "Earnergy needs Usage Access permission to track your app usage and calculate your time value.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                        GradientActionButton(
+                            text = "Grant Permission",
+                            colors = listOf(Color(0xFFFBBF24), Color(0xFFF59E0B)),
+                            onClick = { com.earnergy.util.PermissionHelper.openUsageAccessSettings(context) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            text = "Tap the button above, then find \"Earnergy\" in the list and enable it.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+            }
+
             // Hero Card: Net Value
             PremiumCard(
                 modifier = Modifier.fillMaxWidth()
@@ -145,7 +187,7 @@ fun DashboardScreen(
                         text = when {
                             netValue > 0 -> "You're up ${formatMoney(netValue.toDouble())} today"
                             netValue < 0 -> "Drift is costing you ${formatMoney(-netValue.toDouble())}"
-                            else -> "Start tracking your time"
+                            else -> if (hasPermission) "Start tracking your time" else "Grant permission to start tracking"
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Normal,
@@ -224,6 +266,14 @@ fun DashboardScreen(
                 }
             }
 
+            // Focus Score Card
+            if (uiState.focusMetrics != null) {
+                FocusScoreCard(
+                    metrics = uiState.focusMetrics,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
             // Action Button
             GradientActionButton(
                 text = "Classify apps",
@@ -236,7 +286,7 @@ fun DashboardScreen(
 }
 
 @Composable
-private fun PremiumCard(
+internal fun PremiumCard(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
