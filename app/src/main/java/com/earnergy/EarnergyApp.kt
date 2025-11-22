@@ -101,7 +101,9 @@ fun EarnergyApp() {
                                 onOpenApps = { navController.navigate("apps") },
                                 onOpenCharts = { navController.navigate("insights") },
                                 onOpenSettings = { navController.navigate("settings") },
-                                onRefresh = viewModel::refresh
+                                onRefresh = viewModel::refresh,
+                                onTakeBreak = { viewModel.logBreak() },
+                                onDismissSuggestion = viewModel::dismissSuggestion
                             )
                         }
                         composable("apps") {

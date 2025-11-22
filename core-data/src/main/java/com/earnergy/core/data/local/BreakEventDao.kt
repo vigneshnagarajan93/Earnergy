@@ -4,12 +4,19 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import kotlinx.coroutines.flow.Flow
 
 /**
  * DAO for accessing break event data.
  */
 @Dao
 interface BreakEventDao {
+    /**
+     * Observe all break events for a specific date.
+     */
+    @Query("SELECT * FROM break_events WHERE dateEpochDay = :epochDay ORDER BY timestamp ASC")
+    fun observeForDay(epochDay: Long): Flow<List<BreakEventEntity>>
+    
     /**
      * Get all break events for a specific date.
      */
@@ -39,10 +46,10 @@ interface BreakEventDao {
     suspend fun getLastBreak(): BreakEventEntity?
     
     /**
-     * Get total break time for a specific date (in minutes).
+     * Get total break time for a specific date (in seconds).
      */
-    @Query("SELECT SUM(durationMinutes) FROM break_events WHERE dateEpochDay = :epochDay")
-    suspend fun getTotalBreakMinutesForDay(epochDay: Long): Int?
+    @Query("SELECT SUM(durationSeconds) FROM break_events WHERE dateEpochDay = :epochDay")
+    suspend fun getTotalBreakSecondsForDay(epochDay: Long): Int?
     
     /**
      * Get count of breaks for a specific date.

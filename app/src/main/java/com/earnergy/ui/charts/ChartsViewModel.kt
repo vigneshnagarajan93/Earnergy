@@ -41,6 +41,9 @@ class ChartsViewModel @Inject constructor(
                 
                 var totalInvestedSeconds = 0L
                 var totalDriftSeconds = 0L
+                var totalEarnings = 0.0
+                var totalDriftCost = 0.0
+                val dailyEarnings = mutableListOf<DailyEarning>()
                 
                 // Load each day's data
                 for (i in 0..6) {
@@ -51,6 +54,28 @@ class ChartsViewModel @Inject constructor(
                         val impact = EarningCalculator.computeImpact(summary)
                         totalInvestedSeconds += impact.productiveSeconds
                         totalDriftSeconds += impact.passiveSeconds
+                        totalEarnings += impact.potentialEarningsUsd
+                        totalDriftCost += impact.potentialLossUsd
+                        
+                        // Add daily data
+                        dailyEarnings.add(
+                            DailyEarning(
+                                dayLabel = date.dayOfWeek.name.take(3), // Mon, Tue, etc.
+                                netValue = impact.potentialEarningsUsd - impact.potentialLossUsd,
+                                invested = impact.potentialEarningsUsd,
+                                drift = impact.potentialLossUsd
+                            )
+                        )
+                    } else {
+                        // Add empty day
+                        dailyEarnings.add(
+                            DailyEarning(
+                                dayLabel = date.dayOfWeek.name.take(3),
+                                netValue = 0.0,
+                                invested = 0.0,
+                                drift = 0.0
+                            )
+                        )
                     }
                 }
                 
@@ -64,6 +89,7 @@ class ChartsViewModel @Inject constructor(
                 
                 val investedHours = totalInvestedSeconds / 3600
                 val driftHours = totalDriftSeconds / 3600
+                val weeklyNetValue = totalEarnings - totalDriftCost
                 
                 val summary = when {
                     totalSeconds == 0L -> "No data yet. Start classifying your apps!"
@@ -87,13 +113,6 @@ class ChartsViewModel @Inject constructor(
                 val totalDeepWorkMinutes = focusTrends.sumOf { it.deepWorkMinutes }
                 val totalDeepWorkHours = totalDeepWorkMinutes / 60
                 
-                // Find most common peak productivity hour across the week
-                val peakHours = focusTrends.mapNotNull { trend ->
-                    // We'd need to enhance this - for now just show if we have data
-                    null
-                }
-                val peakProductivityHour = null // Will be enhanced in future
-                
                 _uiState.update {
                     it.copy(
                         investedHoursLabel = "${investedHours}h",
@@ -104,7 +123,10 @@ class ChartsViewModel @Inject constructor(
                         focusTrends = focusTrends,
                         weeklyAverageFocusScore = weeklyAverageFocusScore,
                         totalDeepWorkHours = totalDeepWorkHours,
-                        peakProductivityHour = peakProductivityHour,
+                        totalWeeklyEarnings = totalEarnings,
+                        totalWeeklyDrift = totalDriftCost,
+                        weeklyNetValue = weeklyNetValue,
+                        dailyEarnings = dailyEarnings,
                         isLoading = false
                     )
                 }
@@ -131,5 +153,17 @@ data class ChartsUiState(
     val focusTrends: List<FocusTrend> = emptyList(),
     val weeklyAverageFocusScore: Double = 0.0,
     val totalDeepWorkHours: Int = 0,
-    val peakProductivityHour: String? = null
+    val peakProductivityHour: String? = null,
+    // Earnings analytics
+    val totalWeeklyEarnings: Double = 0.0,
+    val totalWeeklyDrift: Double = 0.0,
+    val weeklyNetValue: Double = 0.0,
+    val dailyEarnings: List<DailyEarning> = emptyList()
+)
+
+data class DailyEarning(
+    val dayLabel: String, // "Mon", "Tue", etc.
+    val netValue: Double,
+    val invested: Double,
+    val drift: Double
 )

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.sharp.ArrowBack
@@ -196,6 +197,60 @@ fun ChartsScreen(
                     }
                 }
             }
+            
+            // Weekly Earnings Card
+            if (uiState.dailyEarnings.isNotEmpty()) {
+                PremiumCard {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.padding(20.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "💰",
+                                style = MaterialTheme.typography.headlineMedium
+                            )
+                            Text(
+                                text = "Weekly Earnings",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                        
+                        // Net Value
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Net Value",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.7f)
+                            )
+                            Text(
+                                text = formatMoney(uiState.weeklyNetValue),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (uiState.weeklyNetValue >= 0) Color(0xFF10B981) else Color(0xFFEF4444)
+                            )
+                        }
+                        
+                        // Simple daily bar chart
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            uiState.dailyEarnings.forEach { day ->
+                                DailyEarningBar(day)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -284,4 +339,49 @@ private fun ChartRow(title: String, hours: String, progress: Float, color: Color
             )
         }
     }
+}
+
+@Composable
+private fun DailyEarningBar(day: com.earnergy.ui.charts.DailyEarning) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = day.dayLabel,
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.White.copy(alpha = 0.7f),
+            modifier = Modifier.width(32.dp)
+        )
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(24.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(Color.White.copy(alpha = 0.1f))
+        ) {
+            val barColor = if (day.netValue >= 0) Color(0xFF10B981) else Color(0xFFEF4444)
+            val maxValue = 100.0 // Assume max $100 per day for scaling
+            val barWidth = (kotlin.math.abs(day.netValue) / maxValue).toFloat().coerceIn(0f, 1f)
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(barWidth)
+                    .height(24.dp)
+                    .background(barColor, RoundedCornerShape(4.dp))
+            )
+        }
+        Text(
+            text = formatMoney(day.netValue),
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
+            color = if (day.netValue >= 0) Color(0xFF10B981) else Color(0xFFEF4444),
+            modifier = Modifier.width(56.dp)
+        )
+    }
+}
+
+private fun formatMoney(value: Double): String {
+    return "$" + String.format("%.2f", value)
 }

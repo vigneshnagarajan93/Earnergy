@@ -38,14 +38,20 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
             ON app_switch_events(dateEpochDay)
         """)
         
-        // Create break_events table
+        // Create break_events table with index on dateEpochDay
         database.execSQL("""
             CREATE TABLE IF NOT EXISTS break_events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
                 timestamp INTEGER NOT NULL,
-                durationMinutes INTEGER NOT NULL,
-                dateEpochDay INTEGER NOT NULL
+                dateEpochDay INTEGER NOT NULL,
+                durationSeconds INTEGER NOT NULL,
+                wasManual INTEGER NOT NULL DEFAULT 0
             )
+        """)
+        
+        database.execSQL("""
+            CREATE INDEX IF NOT EXISTS index_break_events_dateEpochDay 
+            ON break_events(dateEpochDay)
         """)
     }
 }

@@ -53,7 +53,9 @@ fun DashboardScreen(
     onOpenApps: () -> Unit,
     onOpenCharts: () -> Unit,
     onOpenSettings: () -> Unit,
-    onRefresh: () -> Unit
+    onRefresh: () -> Unit,
+    onTakeBreak: () -> Unit,
+    onDismissSuggestion: (String) -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val hasPermission = remember { com.earnergy.util.PermissionHelper.hasUsageStatsPermission(context) }
@@ -270,6 +272,24 @@ fun DashboardScreen(
             if (uiState.focusMetrics != null) {
                 FocusScoreCard(
                     metrics = uiState.focusMetrics,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Health Metrics Card
+            if (uiState.healthMetrics != null) {
+                HealthMetricsCard(
+                    metrics = uiState.healthMetrics,
+                    onTakeBreak = onTakeBreak,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Suggestions Card
+            if (uiState.suggestions.isNotEmpty()) {
+                SuggestionsCard(
+                    suggestions = uiState.suggestions,
+                    onDismiss = onDismissSuggestion,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

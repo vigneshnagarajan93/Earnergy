@@ -63,8 +63,10 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             combine(
                 usageRepository.observeDaySummary(todayEpochDay),
-                appSwitchEventDao.observeForDay(todayEpochDay)
-            ) { summary, switchEntities ->
+                appSwitchEventDao.observeForDay(todayEpochDay),
+                usageRepository.observeHealthMetrics(todayEpochDay),
+                usageRepository.observeActiveSuggestions()
+            ) { summary, switchEntities, healthMetrics, suggestions ->
                 val switches = switchEntities.map { it.toDomain() }
                 val focusMetrics = FocusCalculator.computeFocusMetrics(
                     usages = summary.usages,
@@ -72,15 +74,37 @@ class DashboardViewModel @Inject constructor(
                     dateEpochDay = todayEpochDay
                 )
                 
-                Pair(summary, focusMetrics)
-            }.collect { (summary, focusMetrics) ->
+                Quadruple(summary, focusMetrics, healthMetrics, suggestions)
+            }.collect { (summary, focusMetrics, healthMetrics, suggestions) ->
                 _uiState.update {
                     it.withSummary(summary).copy(
                         focusMetrics = focusMetrics,
+                        healthMetrics = healthMetrics,
+                        suggestions = suggestions,
                         isLoading = false, 
                         errorMessage = null
                     )
                 }
+            }
+        }
+    }
+    
+    fun logBreak(durationSeconds: Int = 20) {
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                usageRepository.logBreak(durationSeconds, wasManual = true)
+            } catch (e: Exception) {
+                // Handle error silently for now
+            }
+        }
+    }
+    
+    fun dismissSuggestion(id: String) {
+        viewModelScope.launch(ioDispatcher) {
+            try {
+                usageRepository.dismissSuggestion(id)
+            } catch (e: Exception) {
+                // Handle error silently
             }
         }
     }
@@ -103,3 +127,10 @@ class DashboardViewModel @Inject constructor(
         )
     }
 }
+
+private data class Quadruple<A, B, C, D>(
+    val first: A,
+    val second: B,
+    val third: C,
+    val fourth: D
+)

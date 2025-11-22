@@ -24,7 +24,14 @@ class EarnergyApplication : Application(), Configuration.Provider {
 
     override fun onCreate() {
         super.onCreate()
+        
+        // Create notification channels
+        com.earnergy.util.NotificationHelper.createNotificationChannels(this)
+        
+        // Schedule workers
         scheduleUsageTracking()
+        scheduleBreakReminders()
+        scheduleSuggestions()
     }
 
     private fun scheduleUsageTracking() {
@@ -34,6 +41,30 @@ class EarnergyApplication : Application(), Configuration.Provider {
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             UsageTrackingWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            workRequest
+        )
+    }
+    
+    private fun scheduleBreakReminders() {
+        val workRequest = PeriodicWorkRequestBuilder<com.earnergy.worker.BreakReminderWorker>(
+            20, TimeUnit.MINUTES
+        ).build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            com.earnergy.worker.BreakReminderWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            workRequest
+        )
+    }
+    
+    private fun scheduleSuggestions() {
+        val workRequest = PeriodicWorkRequestBuilder<com.earnergy.worker.SuggestionWorker>(
+            30, TimeUnit.MINUTES
+        ).build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            com.earnergy.worker.SuggestionWorker.WORK_NAME,
             ExistingPeriodicWorkPolicy.KEEP,
             workRequest
         )
