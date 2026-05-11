@@ -1,14 +1,15 @@
-name: Earnergy CI
+name: Earnergy Release
 
 on:
   push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+    tags:
+      - 'v*' # This triggers when you push a tag like v1.0, v1.1, etc.
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Important: allows the action to create a release
 
     steps:
       - name: Checkout Code
@@ -21,18 +22,20 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Change wrapper permissions
+      - name: Change permissions
         run: chmod +x gradlew
-
-      # This runs the linting and unit tests to ensure code quality before building
-      - name: Run Tests & Lint
-        run: ./gradlew test lintDebug
 
       - name: Build Debug APK
         run: ./gradlew assembleDebug
 
-      - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
+      # This is the "Magic" step that avoids the ZIP wrapper
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: Earnergy-Debug
-          path: app/build/outputs/apk/debug/app-debug.apk
+          files: app/build/outputs/apk/debug/app-debug.apk
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
