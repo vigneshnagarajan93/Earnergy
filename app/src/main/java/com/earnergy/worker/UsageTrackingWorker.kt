@@ -12,6 +12,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.concurrent.TimeUnit
@@ -61,10 +62,9 @@ class UsageTrackingWorker @AssistedInject constructor(
                     
                     // If we have a previous app and it's different from current, record a switch
                     if (previousPackage != null && previousPackage != currentPackage) {
-                        val dateEpochDay = LocalDate.ofInstant(
-                            java.time.Instant.ofEpochMilli(currentTimestamp),
-                            ZoneId.systemDefault()
-                        ).toEpochDay()
+                        val instant = Instant.ofEpochMilli(currentTimestamp)
+                        val zonedDateTime = instant.atZone(ZoneId.systemDefault())
+                        val dateEpochDay = zonedDateTime.toLocalDate().toEpochDay()
                         
                         appSwitchEvents.add(
                             AppSwitchEventEntity(
