@@ -59,6 +59,7 @@ fun DashboardScreen(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val hasPermission = remember { com.earnergy.util.PermissionHelper.hasUsageStatsPermission(context) }
+    val isIgnoringBatteryOptimizations = remember { androidx.compose.runtime.mutableStateOf(com.earnergy.util.PermissionHelper.isIgnoringBatteryOptimizations(context)) }
     
     val scrollState = rememberScrollState()
     val netValue by animateFloatAsState(
@@ -123,6 +124,38 @@ fun DashboardScreen(
                     color = Color(0xFFF87171),
                     style = MaterialTheme.typography.bodyMedium
                 )
+            }
+
+            // Battery Optimization Prompt
+            if (!isIgnoringBatteryOptimizations.value) {
+                PremiumCard(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = "⚠️ Battery Optimization",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFFFBBF24)
+                        )
+                        Text(
+                            text = "Please disable battery optimizations for Earnergy to ensure background tracking works reliably.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                        GradientActionButton(
+                            text = "Disable Optimization",
+                            colors = listOf(Color(0xFFFBBF24), Color(0xFFF59E0B)),
+                            onClick = { com.earnergy.util.PermissionHelper.requestIgnoreBatteryOptimizations(context) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
             }
 
             // Permission Prompt

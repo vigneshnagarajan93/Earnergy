@@ -39,4 +39,22 @@ object PermissionHelper {
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
         context.startActivity(intent)
     }
+
+    /**
+     * Check if the app is ignoring battery optimizations
+     */
+    fun isIgnoringBatteryOptimizations(context: Context): Boolean {
+        val powerManager = context.getSystemService<android.os.PowerManager>()
+        return powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
+    }
+
+    /**
+     * Request the user to ignore battery optimizations for this app
+     */
+    fun requestIgnoreBatteryOptimizations(context: Context) {
+        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS)
+        intent.data = android.net.Uri.parse("package:${context.packageName}")
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        context.startActivity(intent)
+    }
 }
