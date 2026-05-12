@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.combine
 class DashboardViewModel @Inject constructor(
     private val usageRepository: UsageRepository,
     private val appSwitchEventDao: AppSwitchEventDao,
+    private val unlockEventDao: com.earnergy.core.data.local.UnlockEventDao,
     private val clock: Clock,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
@@ -71,19 +72,22 @@ class DashboardViewModel @Inject constructor(
                 combine(
                     usageRepository.observeDaySummary(epochDay),
                     appSwitchEventDao.observeForDay(epochDay),
+                    unlockEventDao.observeForDay(epochDay),
                     usageRepository.observeHealthMetrics(epochDay),
                     usageRepository.observeActiveSuggestions()
-                ) { summary, switchEntities, healthMetrics, suggestions ->
+                ) { summary, switchEntities, unlockEntities, healthMetrics, suggestions ->
                     val switches = switchEntities.map { it.toDomain() }
+                    val unlocks = unlockEntities.map { it.toDomain() }
                     val focusMetrics = FocusCalculator.computeFocusMetrics(
                         usages = summary.usages,
                         appSwitchEvents = switches,
+                        unlockEvents = unlocks,
                         dateEpochDay = epochDay
                     )
 
-                    Quadruple(summary, focusMetrics, healthMetrics, suggestions)
+                    Quintuple(summary, focusMetrics, healthMetrics, suggestions, null)
                 }
-            }.collect { (summary, focusMetrics, healthMetrics, suggestions) ->
+            }.collect { (summary, focusMetrics, healthMetrics, suggestions, _) ->
                 _uiState.update {
                     it.withSummary(summary).copy(
                         focusMetrics = focusMetrics,
@@ -124,6 +128,13 @@ class DashboardViewModel @Inject constructor(
         dateEpochDay = dateEpochDay
     )
 
+    private fun com.earnergy.core.data.local.UnlockEventEntity.toDomain() = com.earnergy.domain.model.UnlockEvent(
+        timestamp = timestamp,
+        dateEpochDay = dateEpochDay,
+        wasNotificationLed = wasNotificationLed,
+        triggeringPackage = triggeringPackage
+    )
+
     private fun DashboardUiState.withSummary(summary: DaySummary): DashboardUiState {
         val impact = EarningCalculator.computeImpact(summary)
         return copy(
@@ -136,9 +147,10 @@ class DashboardViewModel @Inject constructor(
     }
 }
 
-private data class Quadruple<A, B, C, D>(
+private data class Quintuple<A, B, C, D, E>(
     val first: A,
     val second: B,
     val third: C,
-    val fourth: D
+    val fourth: D,
+    val fifth: E
 )

@@ -29,6 +29,29 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
 }
 
 /**
+ * Migration from database version 4 to 5.
+ * Adds unlock_events table.
+ */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS unlock_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                timestamp INTEGER NOT NULL,
+                dateEpochDay INTEGER NOT NULL,
+                wasNotificationLed INTEGER NOT NULL DEFAULT 0,
+                triggeringPackage TEXT
+            )
+        """)
+
+        database.execSQL("""
+            CREATE INDEX IF NOT EXISTS index_unlock_events_dateEpochDay
+            ON unlock_events(dateEpochDay)
+        """)
+    }
+}
+
+/**
  * Migration from database version 3 to 4.
  * Adds three new tables: suggestions, app_switch_events, and break_events.
  */

@@ -9,6 +9,7 @@ object FocusCalculator {
     fun computeFocusMetrics(
         usages: List<AppUsage>,
         appSwitchEvents: List<AppSwitchEvent>,
+        unlockEvents: List<com.earnergy.domain.model.UnlockEvent> = emptyList(),
         dateEpochDay: Long
     ): FocusMetrics {
         val totalMinutes = usages.sumOf { it.totalForeground.inWholeMinutes }
@@ -50,6 +51,28 @@ object FocusCalculator {
         // Calculate peak productivity hour
         val peakProductivityHour = calculatePeakProductivityHour(appSwitchEvents)
         
+        // Calculate unlock metrics
+        val unlockCount = unlockEvents.size
+        val notificationLedUnlockCount = unlockEvents.count { it.wasNotificationLed }
+
+        // Count notification unlocks per app
+        val appNotificationUnlocks = unlockEvents
+            .filter { it.wasNotificationLed && it.triggeringPackage != null }
+            .groupBy { it.triggeringPackage!! }
+            .mapValues { it.value.size }
+
+        // Drift notification count (if we can infer it, but better if we had direct notification events)
+        // For now, let's count notification unlocks triggered by Drift apps
+        val driftPackageNames = usages
+            .filter { it.role == com.earnergy.domain.model.AppRole.DRIFT }
+            .map { it.packageName }
+            .toSet()
+
+        val driftNotificationCount = appNotificationUnlocks
+            .filter { it.key in driftPackageNames }
+            .values
+            .sum()
+
         // Calculate focus score
         // Base score from distraction index
         val baseScore = (1.0 - distractionIndex) * 100.0
@@ -67,7 +90,11 @@ object FocusCalculator {
             distractionIndex = distractionIndex,
             deepWorkSessionCount = deepWorkSessionCount,
             totalDeepWorkMinutes = totalDeepWorkMinutes,
-            peakProductivityHour = peakProductivityHour
+            peakProductivityHour = peakProductivityHour,
+            unlockCount = unlockCount,
+            notificationLedUnlockCount = notificationLedUnlockCount,
+            driftNotificationCount = driftNotificationCount,
+            appNotificationUnlocks = appNotificationUnlocks
         )
     }
     

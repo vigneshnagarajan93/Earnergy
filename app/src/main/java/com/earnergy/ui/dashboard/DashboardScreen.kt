@@ -307,6 +307,11 @@ fun DashboardScreen(
                     metrics = uiState.focusMetrics,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                NotificationInsightsCard(
+                    metrics = uiState.focusMetrics,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
 
             // Health Metrics Card
