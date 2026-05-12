@@ -61,10 +61,7 @@ class UsageTrackingWorker @AssistedInject constructor(
                     
                     // If we have a previous app and it's different from current, record a switch
                     if (previousPackage != null && previousPackage != currentPackage) {
-                        val dateEpochDay = java.time.Instant.ofEpochMilli(currentTimestamp)
-                            .atZone(ZoneId.systemDefault())
-                            .toLocalDate()
-                            .toEpochDay()
+                        val dateEpochDay = java.time.Instant.ofEpochMilli(currentTimestamp).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
                         
                         appSwitchEvents.add(
                             AppSwitchEventEntity(
