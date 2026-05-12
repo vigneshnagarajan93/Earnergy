@@ -14,8 +14,8 @@ local.properties
 
 # Kotlin/Java
 *.class
-*.jar
 !gradle/wrapper/gradle-wrapper.jar
+*.jar
 *.war
 *.ear
 

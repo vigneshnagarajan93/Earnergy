@@ -18,7 +18,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Earnergy">
-
         <!-- Remove androidx.work.WorkManagerInitializer to support on-demand WorkManager initialization -->
         <provider
             android:name="androidx.startup.InitializationProvider"
