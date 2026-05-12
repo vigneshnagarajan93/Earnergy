@@ -104,6 +104,14 @@ fun EarnergyApp() {
                                 onOpenSettings = { navController.navigate("settings") },
                                 onRefresh = viewModel::refresh,
                                 onTakeBreak = { viewModel.logBreak() },
+                                onSuggestionClick = { suggestion ->
+                                    val context = navController.context
+                                    if (suggestion.type == com.earnergy.domain.model.SuggestionType.ENABLE_GRAYSCALE) {
+                                        val intent = android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                        context.startActivity(intent)
+                                    }
+                                    viewModel.onSuggestionClicked(suggestion)
+                                },
                                 onDismissSuggestion = viewModel::dismissSuggestion
                             )
                         }
@@ -126,6 +134,8 @@ fun EarnergyApp() {
                             SettingsScreen(
                                 uiState = uiState,
                                 onHourlyRateChanged = viewModel::onHourlyRateChanged,
+                                onHealthFeaturesToggled = viewModel::onHealthFeaturesToggled,
+                                onBrightnessWarningToggled = viewModel::onBrightnessWarningToggled,
                                 onSaveClicked = viewModel::onSaveClicked,
                                 onBack = { navController.popBackStack() }
                             )

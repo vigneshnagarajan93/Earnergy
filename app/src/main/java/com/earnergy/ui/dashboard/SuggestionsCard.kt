@@ -29,6 +29,7 @@ import com.earnergy.domain.model.SuggestionType
 @Composable
 fun SuggestionsCard(
     suggestions: List<Suggestion>,
+    onSuggestionClick: (Suggestion) -> Unit,
     onDismiss: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -60,6 +61,7 @@ fun SuggestionsCard(
             suggestions.take(3).forEach { suggestion ->
                 SuggestionItem(
                     suggestion = suggestion,
+                    onClick = { onSuggestionClick(suggestion) },
                     onDismiss = { onDismiss(suggestion.id) }
                 )
             }
@@ -70,6 +72,7 @@ fun SuggestionsCard(
 @Composable
 private fun SuggestionItem(
     suggestion: Suggestion,
+    onClick: () -> Unit,
     onDismiss: () -> Unit
 ) {
     Box(
@@ -77,6 +80,7 @@ private fun SuggestionItem(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(getSuggestionBackgroundColor(suggestion.type))
+            .clickable(onClick = onClick)
             .padding(12.dp)
     ) {
         Row(

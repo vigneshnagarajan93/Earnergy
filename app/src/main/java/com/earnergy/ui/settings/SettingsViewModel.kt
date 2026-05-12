@@ -26,10 +26,10 @@ class SettingsViewModel @Inject constructor(
     val events: SharedFlow<SettingsEvent> = _events
 
     init {
-        observeHourlyRate()
+        observeSettings()
     }
 
-    private fun observeHourlyRate() {
+    private fun observeSettings() {
         viewModelScope.launch {
             settingsRepository.hourlyRate.collectLatest { rate ->
                 val formatted = String.format("%.2f", rate)
@@ -42,10 +42,32 @@ class SettingsViewModel @Inject constructor(
                 }
             }
         }
+        viewModelScope.launch {
+            settingsRepository.healthFeaturesEnabled.collectLatest { enabled ->
+                _uiState.update { it.copy(healthFeaturesEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.brightnessWarningEnabled.collectLatest { enabled ->
+                _uiState.update { it.copy(brightnessWarningEnabled = enabled) }
+            }
+        }
     }
 
     fun onHourlyRateChanged(value: String) {
         _uiState.update { it.copy(hourlyRateInput = value, errorMessage = null) }
+    }
+
+    fun onHealthFeaturesToggled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setHealthFeaturesEnabled(enabled)
+        }
+    }
+
+    fun onBrightnessWarningToggled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setBrightnessWarningEnabled(enabled)
+        }
     }
 
     fun onSaveClicked() {
@@ -75,6 +97,8 @@ class SettingsViewModel @Inject constructor(
 
 data class SettingsUiState(
     val hourlyRateInput: String = "",
+    val healthFeaturesEnabled: Boolean = true,
+    val brightnessWarningEnabled: Boolean = true,
     val isSaving: Boolean = false,
     val errorMessage: String? = null
 )

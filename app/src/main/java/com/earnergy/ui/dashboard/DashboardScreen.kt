@@ -55,6 +55,7 @@ fun DashboardScreen(
     onOpenSettings: () -> Unit,
     onRefresh: () -> Unit,
     onTakeBreak: () -> Unit,
+    onSuggestionClick: (com.earnergy.domain.model.Suggestion) -> Unit,
     onDismissSuggestion: (String) -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -322,6 +323,7 @@ fun DashboardScreen(
             if (uiState.suggestions.isNotEmpty()) {
                 SuggestionsCard(
                     suggestions = uiState.suggestions,
+                    onSuggestionClick = onSuggestionClick,
                     onDismiss = onDismissSuggestion,
                     modifier = Modifier.fillMaxWidth()
                 )
