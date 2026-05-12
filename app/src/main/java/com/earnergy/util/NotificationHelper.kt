@@ -64,7 +64,7 @@ object NotificationHelper {
         )
         
         val notification = NotificationCompat.Builder(context, CHANNEL_ID_BREAK_REMINDERS)
-            .setSmallIcon(R.drawable.ic_launcher_foreground) // TODO: Create a better icon
+            .setSmallIcon(R.drawable.ic_eye)
             .setContentTitle("👁️ Time for a break!")
             .setContentText("You've been using your phone for $continuousMinutes minutes. Take a 20-second break.")
             .setStyle(
