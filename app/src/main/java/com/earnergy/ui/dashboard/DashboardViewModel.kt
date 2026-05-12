@@ -14,6 +14,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -31,8 +32,7 @@ class DashboardViewModel @Inject constructor(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
 
-    private val todayEpochDay: Long = LocalDate.now(clock).toEpochDay()
-
+    private val _todayEpochDay = MutableStateFlow(LocalDate.now(clock).toEpochDay())
 
     private val _uiState = MutableStateFlow(DashboardUiState(isLoading = true))
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
@@ -47,6 +47,11 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun refreshNow() {
+        val currentDay = LocalDate.now(clock).toEpochDay()
+        if (_todayEpochDay.value != currentDay) {
+            _todayEpochDay.value = currentDay
+        }
+
         viewModelScope.launch(ioDispatcher) {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             try {
@@ -59,22 +64,25 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private fun observeData() {
         viewModelScope.launch {
-            combine(
-                usageRepository.observeDaySummary(todayEpochDay),
-                appSwitchEventDao.observeForDay(todayEpochDay),
-                usageRepository.observeHealthMetrics(todayEpochDay),
-                usageRepository.observeActiveSuggestions()
-            ) { summary, switchEntities, healthMetrics, suggestions ->
-                val switches = switchEntities.map { it.toDomain() }
-                val focusMetrics = FocusCalculator.computeFocusMetrics(
-                    usages = summary.usages,
-                    appSwitchEvents = switches,
-                    dateEpochDay = todayEpochDay
-                )
-                
-                Quadruple(summary, focusMetrics, healthMetrics, suggestions)
+            _todayEpochDay.flatMapLatest { epochDay ->
+                combine(
+                    usageRepository.observeDaySummary(epochDay),
+                    appSwitchEventDao.observeForDay(epochDay),
+                    usageRepository.observeHealthMetrics(epochDay),
+                    usageRepository.observeActiveSuggestions()
+                ) { summary, switchEntities, healthMetrics, suggestions ->
+                    val switches = switchEntities.map { it.toDomain() }
+                    val focusMetrics = FocusCalculator.computeFocusMetrics(
+                        usages = summary.usages,
+                        appSwitchEvents = switches,
+                        dateEpochDay = epochDay
+                    )
+
+                    Quadruple(summary, focusMetrics, healthMetrics, suggestions)
+                }
             }.collect { (summary, focusMetrics, healthMetrics, suggestions) ->
                 _uiState.update {
                     it.withSummary(summary).copy(

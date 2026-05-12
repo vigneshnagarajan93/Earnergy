@@ -45,8 +45,8 @@ class UsageRepository @Inject constructor(
 ) {
     suspend fun refreshToday() {
         val todayEpochDay = LocalDate.now(clock).toEpochDay()
-        val usages = usageStatsDataSource.queryUsageForDay(todayEpochDay)
-        val entities = usages.map { usage ->
+        val usageResult = usageStatsDataSource.queryUsageForDay(todayEpochDay)
+        val entities = usageResult.usages.map { usage ->
             AppUsageEntity(
                 dateEpochDay = todayEpochDay,
                 packageName = usage.packageName,
@@ -57,6 +57,9 @@ class UsageRepository @Inject constructor(
             )
         }
         appUsageDao.replaceForDay(todayEpochDay, entities)
+
+        breakEventDao.deleteAutomaticBreaksForDay(todayEpochDay)
+        breakEventDao.insertAll(usageResult.automaticBreaks)
     }
 
     fun observeDaySummary(epochDay: Long): Flow<DaySummary> {

@@ -3,7 +3,9 @@ package com.earnergy.core.data.usagestats
 import android.app.usage.UsageStatsManager
 import android.content.pm.PackageManager
 import com.earnergy.domain.model.AppCategory
+import android.app.usage.UsageEvents
 import com.earnergy.domain.model.AppUsage
+import com.earnergy.core.data.local.BreakEventEntity
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -11,40 +13,121 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration.Companion.seconds
 
+data class UsageResult(
+    val usages: List<AppUsage>,
+    val automaticBreaks: List<BreakEventEntity>
+)
+
 @Singleton
 class UsageStatsDataSource @Inject constructor(
     private val usageStatsManager: UsageStatsManager,
     private val packageManager: PackageManager,
     private val clock: Clock = Clock.systemDefaultZone()
 ) {
-    fun queryUsageForDay(epochDay: Long): List<AppUsage> {
+    fun queryUsageForDay(epochDay: Long): UsageResult {
         val zone = clock.zone
         val date = LocalDate.ofEpochDay(epochDay)
         val startInstant = date.atStartOfDay(zone).toInstant()
         val endInstant = minOf(Instant.now(clock), startInstant.plusSeconds(SECONDS_PER_DAY))
 
-        val stats = usageStatsManager.queryUsageStats(
-            UsageStatsManager.INTERVAL_DAILY,
-            startInstant.toEpochMilli(),
-            endInstant.toEpochMilli()
-        ) ?: emptyList()
+        val startTime = startInstant.toEpochMilli()
+        val endTime = endInstant.toEpochMilli()
 
-        return stats
-            .filter { it.totalTimeInForeground > 0 }
-            .groupBy { it.packageName }
-            .map { (packageName, entries) ->
-                val totalSeconds = entries.sumOf { (it.totalTimeInForeground / 1000L).coerceAtLeast(0) }
-                val (displayName, isSystem) = resolveLabelAndSystemStatus(packageName)
-                val category = guessCategory(packageName, displayName)
-                AppUsage(
-                    packageName = packageName,
-                    displayName = displayName,
-                    category = category,
-                    totalForeground = totalSeconds.seconds,
-                    isSystemApp = isSystem
+        val events = usageStatsManager.queryEvents(startTime, endTime)
+
+        val appUsageTimes = mutableMapOf<String, Long>()
+        var lastResumedPackage: String? = null
+        var lastResumedTime: Long? = null
+
+        val automaticBreaks = mutableListOf<BreakEventEntity>()
+        var lastPauseTime: Long = startTime
+
+        val event = UsageEvents.Event()
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+
+            val timestamp = event.timeStamp
+            val packageName = event.packageName
+
+            when (event.eventType) {
+                UsageEvents.Event.ACTIVITY_RESUMED -> {
+                    // Calculate if there was a break before this resume
+                    val timeSinceLastPause = timestamp - lastPauseTime
+                    if (timeSinceLastPause >= 30 * 60 * 1000L) { // 30+ minutes
+                        automaticBreaks.add(
+                            BreakEventEntity(
+                                timestamp = lastPauseTime,
+                                dateEpochDay = epochDay,
+                                durationSeconds = (timeSinceLastPause / 1000L).toInt(),
+                                wasManual = false
+                            )
+                        )
+                    }
+
+                    if (lastResumedPackage != null && lastResumedTime != null) {
+                        val duration = timestamp - lastResumedTime!!
+                        if (duration > 0) {
+                            appUsageTimes[lastResumedPackage!!] = (appUsageTimes[lastResumedPackage!!] ?: 0L) + duration
+                        }
+                    }
+                    lastResumedPackage = packageName
+                    lastResumedTime = timestamp
+                }
+                UsageEvents.Event.ACTIVITY_PAUSED, UsageEvents.Event.ACTIVITY_STOPPED -> {
+                    if (packageName == lastResumedPackage && lastResumedTime != null) {
+                        val duration = timestamp - lastResumedTime!!
+                        if (duration > 0) {
+                            appUsageTimes[lastResumedPackage!!] = (appUsageTimes[lastResumedPackage!!] ?: 0L) + duration
+                        }
+                        lastResumedPackage = null
+                        lastResumedTime = null
+                    }
+                    lastPauseTime = timestamp
+                }
+            }
+        }
+
+        // Handle case where an app is still running at the end of the queried period
+        if (lastResumedPackage != null && lastResumedTime != null) {
+            val duration = endTime - lastResumedTime!!
+            if (duration > 0) {
+                appUsageTimes[lastResumedPackage!!] = (appUsageTimes[lastResumedPackage!!] ?: 0L) + duration
+            }
+        } else {
+            // Check for break up to current end time if no app is resumed
+            val timeSinceLastPause = endTime - lastPauseTime
+            if (timeSinceLastPause >= 30 * 60 * 1000L) {
+                automaticBreaks.add(
+                    BreakEventEntity(
+                        timestamp = lastPauseTime,
+                        dateEpochDay = epochDay,
+                        durationSeconds = (timeSinceLastPause / 1000L).toInt(),
+                        wasManual = false
+                    )
                 )
             }
-            .sortedByDescending { it.totalForeground }
+        }
+
+        val appUsages = appUsageTimes.mapNotNull { (packageName, totalMillis) ->
+            if (totalMillis <= 0) return@mapNotNull null
+
+            val totalSeconds = totalMillis / 1000L
+            val (displayName, isSystem) = resolveLabelAndSystemStatus(packageName)
+            val category = guessCategory(packageName, displayName)
+
+            AppUsage(
+                packageName = packageName,
+                displayName = displayName,
+                category = category,
+                totalForeground = totalSeconds.seconds,
+                isSystemApp = isSystem
+            )
+        }.sortedByDescending { it.totalForeground }
+
+        return UsageResult(
+            usages = appUsages,
+            automaticBreaks = automaticBreaks
+        )
     }
 
     private fun resolveLabelAndSystemStatus(packageName: String): Pair<String, Boolean> {

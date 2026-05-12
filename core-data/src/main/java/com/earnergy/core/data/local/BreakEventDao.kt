@@ -40,6 +40,18 @@ interface BreakEventDao {
     suspend fun insert(event: BreakEventEntity)
     
     /**
+     * Insert multiple break events.
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(events: List<BreakEventEntity>)
+
+    /**
+     * Delete automatic breaks for a specific day.
+     */
+    @Query("DELETE FROM break_events WHERE dateEpochDay = :epochDay AND wasManual = 0")
+    suspend fun deleteAutomaticBreaksForDay(epochDay: Long)
+
+    /**
      * Get the most recent break event.
      */
     @Query("SELECT * FROM break_events ORDER BY timestamp DESC LIMIT 1")
