@@ -25,10 +25,10 @@ class AppClassificationViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val today = LocalDate.now().toEpochDay()
-            usageRepository.observeDaySummary(today).collect { summary ->
+            usageRepository.observeAllApps(today).collect { allApps ->
                 _uiState.update { current ->
                     current.copy(
-                        apps = summary.usages.map { usage ->
+                        apps = allApps.map { usage ->
                             AppClassificationItem(
                                 appName = usage.displayName,
                                 packageName = usage.packageName,
