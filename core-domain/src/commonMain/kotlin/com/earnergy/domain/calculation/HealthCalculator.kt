@@ -44,9 +44,11 @@ object HealthCalculator {
         } else 0.0
         
         // Calculate continuous screen time since last break
-        val lastBreakTimestamp = breakEvents.maxOfOrNull { it.timestamp }
-        val continuousScreenTimeMinutes = if (lastBreakTimestamp != null) {
-            ((currentTimeMillis - lastBreakTimestamp) / 60000).toInt()
+        val lastBreakEvent = breakEvents.maxByOrNull { it.timestamp }
+        val continuousScreenTimeMinutes = if (lastBreakEvent != null) {
+            val endOfLastBreak = lastBreakEvent.timestamp + (lastBreakEvent.durationSeconds * 1000L)
+            val timeSinceBreakMinutes = ((currentTimeMillis - endOfLastBreak) / 60000).toInt()
+            timeSinceBreakMinutes.coerceIn(0, totalScreenTimeMinutes)
         } else {
             totalScreenTimeMinutes
         }
@@ -66,7 +68,7 @@ object HealthCalculator {
             breaksRecommended = breaksRecommended,
             breaksTaken = breaksTaken,
             breakComplianceRate = breakComplianceRate,
-            lastBreakTimestamp = lastBreakTimestamp
+            lastBreakTimestamp = lastBreakEvent?.timestamp
         )
     }
     
