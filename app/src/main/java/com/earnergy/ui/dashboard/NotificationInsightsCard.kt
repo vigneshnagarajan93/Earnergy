@@ -49,7 +49,7 @@ fun NotificationInsightsCard(
             InsightItem(
                 label = "Drift Notifications",
                 value = metrics.driftNotificationCount.toString(),
-                description = "Unlocks triggered by Drift apps",
+                description = "Total notifications from Drift apps",
                 modifier = Modifier.fillMaxWidth()
             )
 

@@ -29,6 +29,7 @@ class DashboardViewModel @Inject constructor(
     private val usageRepository: UsageRepository,
     private val appSwitchEventDao: AppSwitchEventDao,
     private val unlockEventDao: com.earnergy.core.data.local.UnlockEventDao,
+    private val notificationEventDao: com.earnergy.core.data.local.NotificationEventDao,
     private val clock: Clock,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
@@ -78,14 +79,24 @@ class DashboardViewModel @Inject constructor(
                     appSwitchEventDao.observeForDay(epochDay),
                     unlockEventDao.observeForDay(epochDay),
                     usageRepository.observeHealthMetrics(epochDay),
-                    usageRepository.observeActiveSuggestions()
-                ) { summary, switchEntities, unlockEntities, healthMetrics, suggestions ->
+                    usageRepository.observeActiveSuggestions(),
+                    notificationEventDao.observeForDay(epochDay)
+                ) { args: Array<*> ->
+                    val summary = args[0] as DaySummary
+                    val switchEntities = args[1] as List<AppSwitchEventEntity>
+                    val unlockEntities = args[2] as List<com.earnergy.core.data.local.UnlockEventEntity>
+                    val healthMetrics = args[3] as com.earnergy.domain.model.HealthMetrics
+                    val suggestions = args[4] as List<com.earnergy.domain.model.Suggestion>
+                    val notificationEntities = args[5] as List<com.earnergy.core.data.local.NotificationEventEntity>
+
                     val switches = switchEntities.map { it.toDomain() }
                     val unlocks = unlockEntities.map { it.toDomain() }
+                    val notifications = notificationEntities.map { it.toDomain() }
                     val focusMetrics = FocusCalculator.computeFocusMetrics(
                         usages = summary.usages,
                         appSwitchEvents = switches,
                         unlockEvents = unlocks,
+                        notificationEvents = notifications,
                         dateEpochDay = epochDay
                     )
 
@@ -137,6 +148,12 @@ class DashboardViewModel @Inject constructor(
         dateEpochDay = dateEpochDay,
         wasNotificationLed = wasNotificationLed,
         triggeringPackage = triggeringPackage
+    )
+
+    private fun com.earnergy.core.data.local.NotificationEventEntity.toDomain() = com.earnergy.domain.model.NotificationEvent(
+        timestamp = timestamp,
+        packageName = packageName,
+        dateEpochDay = dateEpochDay
     )
 
     private fun DashboardUiState.withSummary(summary: DaySummary): DashboardUiState {

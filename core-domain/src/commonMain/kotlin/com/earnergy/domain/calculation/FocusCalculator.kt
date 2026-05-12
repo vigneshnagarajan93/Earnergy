@@ -10,6 +10,7 @@ object FocusCalculator {
         usages: List<AppUsage>,
         appSwitchEvents: List<AppSwitchEvent>,
         unlockEvents: List<com.earnergy.domain.model.UnlockEvent> = emptyList(),
+        notificationEvents: List<com.earnergy.domain.model.NotificationEvent> = emptyList(),
         dateEpochDay: Long
     ): FocusMetrics {
         val totalMinutes = usages.sumOf { it.totalForeground.inWholeMinutes }
@@ -61,17 +62,14 @@ object FocusCalculator {
             .groupBy { it.triggeringPackage!! }
             .mapValues { it.value.size }
 
-        // Drift notification count (if we can infer it, but better if we had direct notification events)
-        // For now, let's count notification unlocks triggered by Drift apps
+        // Drift notification count
         val driftPackageNames = usages
             .filter { it.role == com.earnergy.domain.model.AppRole.DRIFT }
             .map { it.packageName }
             .toSet()
 
-        val driftNotificationCount = appNotificationUnlocks
-            .filter { it.key in driftPackageNames }
-            .values
-            .sum()
+        val driftNotificationCount = notificationEvents
+            .count { it.packageName in driftPackageNames }
 
         // Calculate focus score
         // Base score from distraction index

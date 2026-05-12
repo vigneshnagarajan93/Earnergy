@@ -17,7 +17,8 @@ import kotlin.time.Duration.Companion.seconds
 data class UsageResult(
     val usages: List<AppUsage>,
     val automaticBreaks: List<BreakEventEntity>,
-    val unlockEvents: List<com.earnergy.core.data.local.UnlockEventEntity> = emptyList()
+    val unlockEvents: List<com.earnergy.core.data.local.UnlockEventEntity> = emptyList(),
+    val notificationEvents: List<com.earnergy.core.data.local.NotificationEventEntity> = emptyList()
 )
 
 @Singleton
@@ -64,8 +65,13 @@ class UsageStatsDataSource @Inject constructor(
         var lastPauseTime: Long = startTime
 
         val unlockEvents = mutableListOf<com.earnergy.core.data.local.UnlockEventEntity>()
+        val notificationEvents = mutableListOf<com.earnergy.core.data.local.NotificationEventEntity>()
         var lastNotificationTime: Long = 0
         var lastNotificationPackage: String? = null
+
+        // Track recent notifications for improved unlock heuristic
+        // Map of package name to last notification timestamp
+        val recentNotifications = mutableMapOf<String, Long>()
 
         val event = UsageEvents.Event()
         while (events.hasNextEvent()) {
@@ -90,8 +96,34 @@ class UsageStatsDataSource @Inject constructor(
                 12 -> { // UsageEvents.Event.NOTIFICATION_INTERRUPTION (API 12/28)
                     lastNotificationTime = timestamp
                     lastNotificationPackage = packageName
+                    recentNotifications[packageName] = timestamp
+                    notificationEvents.add(
+                        com.earnergy.core.data.local.NotificationEventEntity(
+                            timestamp = timestamp,
+                            packageName = packageName,
+                            dateEpochDay = epochDay
+                        )
+                    )
                 }
                 UsageEvents.Event.ACTIVITY_RESUMED -> {
+                    // Improved unlock heuristic: if app resumed very shortly after an unlock,
+                    // and it had a recent notification, count it as a notification-led unlock
+                    val lastUnlock = unlockEvents.lastOrNull()
+                    if (lastUnlock != null && !lastUnlock.wasNotificationLed) {
+                        val timeSinceUnlock = timestamp - lastUnlock.timestamp
+                        if (timeSinceUnlock in 0..1500) { // Resumed within 1.5s of unlock
+                            val lastAppNotif = recentNotifications[packageName] ?: 0L
+                            if ((timestamp - lastAppNotif) < 10 * 60 * 1000L) { // Notif within last 10 mins
+                                // Retroactively mark the unlock as notification led
+                                val updatedUnlock = lastUnlock.copy(
+                                    wasNotificationLed = true,
+                                    triggeringPackage = packageName
+                                )
+                                unlockEvents[unlockEvents.size - 1] = updatedUnlock
+                            }
+                        }
+                    }
+
                     // Calculate if there was a break before this resume
                     val timeSinceLastPause = timestamp - lastPauseTime
                     if (timeSinceLastPause >= 30 * 60 * 1000L) { // 30+ minutes
@@ -168,7 +200,8 @@ class UsageStatsDataSource @Inject constructor(
         return UsageResult(
             usages = appUsages,
             automaticBreaks = automaticBreaks,
-            unlockEvents = unlockEvents
+            unlockEvents = unlockEvents,
+            notificationEvents = notificationEvents
         )
     }
 
