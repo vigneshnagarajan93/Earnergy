@@ -44,6 +44,31 @@ class UsageRepository @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val clock: Clock = Clock.systemDefaultZone()
 ) {
+    private val DEFAULT_DRIFT_PACKAGES = setOf(
+        "com.zhiliaoapp.musically",      // TikTok
+        "com.instagram.android",          // Instagram
+        "com.google.android.youtube",     // YouTube
+        "com.twitter.android",            // X (Twitter)
+        "com.reddit.frontpage",           // Reddit
+        "com.facebook.katana",            // Facebook
+        "com.snapchat.android",           // Snapchat
+        "com.pinterest",                  // Pinterest
+        "com.linkedin.android",           // LinkedIn
+        "com.discord",                    // Discord
+        "com.einnovation.temu",           // Temu
+        "com.zzkko",                      // SHEIN
+        "com.amazon.mShop.android.shopping", // Amazon
+        "com.ebay.mobile",                // eBay
+        "com.habby.survivor",             // Survivor.io (Infinite Game)
+        "com.king.candycrushsaga",        // Candy Crush
+        "com.kiloo.subwaysurf",           // Subway Surfers
+        "com.playrix.homescapes",         // Homescapes
+        "com.miHoYo.GenshinImpact",       // Genshin Impact
+        "com.scopely.monopolygo",         // Monopoly GO!
+        "com.bilibili.app.in",            // Bilibili
+        "com.xingin.xhs"                  // RedNote (Xiaohongshu)
+    )
+
     suspend fun refreshToday() {
         val todayEpochDay = LocalDate.now(clock).toEpochDay()
         val usageResult = usageStatsDataSource.queryUsageForDay(todayEpochDay)
@@ -109,7 +134,7 @@ class UsageRepository @Inject constructor(
                 val isSystemApp = usage?.isSystemApp ?: installed?.isSystemApp ?: false
                 val totalSeconds = usage?.totalSeconds ?: 0L
 
-                val role = resolveRole(isSystemApp, category, configRole)
+                val role = resolveRole(packageName, isSystemApp, category, configRole)
 
                 AppUsage(
                     packageName = packageName,
@@ -184,11 +209,13 @@ class UsageRepository @Inject constructor(
     }
 
     private fun resolveRole(
+        packageName: String,
         isSystemApp: Boolean,
         category: com.earnergy.domain.model.AppCategory,
         configRole: AppRole?
     ): AppRole {
         return configRole ?: when {
+            packageName in DEFAULT_DRIFT_PACKAGES -> AppRole.DRIFT
             isSystemApp -> AppRole.IGNORED
             category == com.earnergy.domain.model.AppCategory.PRODUCTIVE -> AppRole.INVESTED
             category == com.earnergy.domain.model.AppCategory.SOCIAL ||
@@ -203,7 +230,7 @@ class UsageRepository @Inject constructor(
             displayName = displayName,
             category = category,
             totalForeground = totalSeconds.seconds,
-            role = resolveRole(isSystemApp, category, configRole),
+            role = resolveRole(packageName, isSystemApp, category, configRole),
             isSystemApp = isSystemApp
         )
     }
