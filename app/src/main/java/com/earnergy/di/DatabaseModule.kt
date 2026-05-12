@@ -7,6 +7,8 @@ import com.earnergy.core.data.local.AppSwitchEventDao
 import com.earnergy.core.data.local.AppUsageDao
 import com.earnergy.core.data.local.AppUsageDatabase
 import com.earnergy.core.data.local.BreakEventDao
+import com.earnergy.core.data.local.MIGRATION_1_2
+import com.earnergy.core.data.local.MIGRATION_2_3
 import com.earnergy.core.data.local.MIGRATION_3_4
 import com.earnergy.core.data.local.SuggestionDao
 import dagger.Module
@@ -28,8 +30,7 @@ object DatabaseModule {
             AppUsageDatabase::class.java,
             "app_usage.db"
         )
-        .addMigrations(MIGRATION_3_4)
-        .fallbackToDestructiveMigration()
+        .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
         .build()
     }
 
