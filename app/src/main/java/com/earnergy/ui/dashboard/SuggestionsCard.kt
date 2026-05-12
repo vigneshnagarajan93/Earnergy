@@ -1,9 +1,6 @@
 package com.earnergy.ui.dashboard
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,14 +9,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,7 +33,7 @@ fun SuggestionsCard(
 ) {
     if (suggestions.isEmpty()) return
     
-    PremiumCard(modifier = modifier) {
+    ElevatedCard(modifier = modifier) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -47,12 +45,11 @@ fun SuggestionsCard(
             ) {
                 Text(
                     text = "💡",
-                    style = MaterialTheme.typography.headlineMedium
+                    style = MaterialTheme.typography.titleLarge
                 )
                 Text(
                     text = "Smart Suggestions",
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -75,16 +72,14 @@ private fun SuggestionItem(
     onClick: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(getSuggestionBackgroundColor(suggestion.type))
-            .clickable(onClick = onClick)
-            .padding(12.dp)
+    Surface(
+        onClick = onClick,
+        color = getSuggestionBackgroundColor(suggestion.type),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.Top
         ) {
@@ -103,14 +98,13 @@ private fun SuggestionItem(
                     Text(
                         text = suggestion.title,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
                 Text(
                     text = suggestion.description,
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.8f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             
@@ -121,7 +115,7 @@ private fun SuggestionItem(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = "Dismiss",
-                    tint = Color.White.copy(alpha = 0.6f),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -132,12 +126,12 @@ private fun SuggestionItem(
 @Composable
 private fun getSuggestionBackgroundColor(type: SuggestionType): Color {
     return when (type) {
-        SuggestionType.TAKE_BREAK -> Color(0xFF10B981).copy(alpha = 0.15f)
-        SuggestionType.IMPROVE_FOCUS -> Color(0xFF6366F1).copy(alpha = 0.15f)
-        SuggestionType.REDUCE_DRIFT_TIME -> Color(0xFFEF4444).copy(alpha = 0.15f)
-        SuggestionType.ENABLE_GRAYSCALE -> Color(0xFF8B5CF6).copy(alpha = 0.15f)
-        SuggestionType.ENABLE_DND -> Color(0xFFFBBF24).copy(alpha = 0.15f)
-        SuggestionType.ENERGY_BOOST -> Color(0xFF14B8A6).copy(alpha = 0.15f)
+        SuggestionType.TAKE_BREAK -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+        SuggestionType.IMPROVE_FOCUS -> MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
+        SuggestionType.REDUCE_DRIFT_TIME -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.4f)
+        SuggestionType.ENABLE_GRAYSCALE -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.4f)
+        SuggestionType.ENABLE_DND -> MaterialTheme.colorScheme.surfaceVariant
+        SuggestionType.ENERGY_BOOST -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
     }
 }
 
