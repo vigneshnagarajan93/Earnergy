@@ -65,6 +65,10 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
+    fun onSuggestionClicked(suggestion: com.earnergy.domain.model.Suggestion) {
+        // Implementation for suggestion actions
+    }
+
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     private fun observeData() {
         viewModelScope.launch {

@@ -48,6 +48,7 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
             CREATE INDEX IF NOT EXISTS index_unlock_events_dateEpochDay
             ON unlock_events(dateEpochDay)
         """)
+
     }
 }
 

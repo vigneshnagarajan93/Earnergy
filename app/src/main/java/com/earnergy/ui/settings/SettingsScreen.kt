@@ -39,8 +39,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import com.earnergy.ui.common.GlassSurface
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,6 +51,8 @@ import com.earnergy.ui.common.GlassSurface
 fun SettingsScreen(
     uiState: SettingsUiState,
     onHourlyRateChanged: (String) -> Unit,
+    onHealthFeaturesToggled: (Boolean) -> Unit,
+    onBrightnessWarningToggled: (Boolean) -> Unit,
     onSaveClicked: () -> Unit,
     onBack: () -> Unit
 ) {
@@ -92,9 +97,15 @@ fun SettingsScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Text(
-                                text = "Hourly rate",
+                                text = "Economy",
                                 style = MaterialTheme.typography.titleMedium,
-                                color = Color.White
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Hourly rate",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Color.White.copy(alpha = 0.8f)
                             )
                             GlassInputField(
                                 value = uiState.hourlyRateInput,
@@ -103,11 +114,38 @@ fun SettingsScreen(
                             Text(
                                 text = "Used to estimate the cost of drift time and the value of invested time. Stored only on this device.",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White//MaterialTheme.colorScheme.onSurfaceVariant
+                                color = Color.White.copy(alpha = 0.6f)
                             )
                             uiState.errorMessage?.let { error ->
-                                Text(text = error, color = Color.White)//MaterialTheme.colorScheme.error)
+                                Text(text = error, color = Color(0xFFEF4444))
                             }
+                        }
+                    }
+
+                    GlassSurface {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(
+                                text = "Health",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            ToggleRow(
+                                label = "20/20/20 Rule Reminders",
+                                description = "Get overlays and notifications to take breaks every 20 minutes.",
+                                checked = uiState.healthFeaturesEnabled,
+                                onCheckedChange = onHealthFeaturesToggled
+                            )
+
+                            ToggleRow(
+                                label = "Dark Environment Warning",
+                                description = "Warn if screen brightness is too high in dark environments.",
+                                checked = uiState.brightnessWarningEnabled,
+                                onCheckedChange = onBrightnessWarningToggled
+                            )
                         }
                     }
                     Spacer(modifier = Modifier.weight(1f))
@@ -169,6 +207,44 @@ private fun GlassInputField(value: String, onValueChange: (String) -> Unit) {
                 modifier = Modifier.weight(1f)
             )
         }
+    }
+}
+
+@Composable
+private fun ToggleRow(
+    label: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.6f)
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = Color(0xFF4C6FFF),
+                uncheckedThumbColor = Color.White.copy(alpha = 0.6f),
+                uncheckedTrackColor = Color.White.copy(alpha = 0.2f)
+            )
+        )
     }
 }
 

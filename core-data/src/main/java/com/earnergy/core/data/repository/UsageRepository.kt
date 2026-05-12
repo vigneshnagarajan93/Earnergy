@@ -83,6 +83,49 @@ class UsageRepository @Inject constructor(
         }.distinctUntilChanged()
     }
 
+    /**
+     * Observe all apps (installed and those with usage) for a specific day.
+     */
+    fun observeAllApps(epochDay: Long): Flow<List<AppUsage>> {
+        val installedApps = usageStatsDataSource.getInstalledApps()
+        val installedMap = installedApps.associateBy { it.packageName }
+
+        return combine(
+            appUsageDao.observeForDay(epochDay),
+            appConfigDao.observeAll()
+        ) { usageEntities, configEntities ->
+            val usageMap = usageEntities.associateBy { it.packageName }
+            val configMap = configEntities.associate { it.packageName to it.role }
+
+            val allPackages = (installedMap.keys + usageMap.keys).distinct()
+
+            allPackages.map { packageName ->
+                val installed = installedMap[packageName]
+                val usage = usageMap[packageName]
+                val configRole = configMap[packageName]
+
+                val displayName = usage?.displayName ?: installed?.displayName ?: packageName
+                val category = usage?.category ?: installed?.category ?: com.earnergy.domain.model.AppCategory.OTHER
+                val isSystemApp = usage?.isSystemApp ?: installed?.isSystemApp ?: false
+                val totalSeconds = usage?.totalSeconds ?: 0L
+
+                val role = resolveRole(isSystemApp, category, configRole)
+
+                AppUsage(
+                    packageName = packageName,
+                    displayName = displayName,
+                    category = category,
+                    totalForeground = totalSeconds.seconds,
+                    role = role,
+                    isSystemApp = isSystemApp
+                )
+            }.sortedWith(
+                compareByDescending<AppUsage> { it.totalForeground }
+                    .thenBy { it.displayName }
+            )
+        }.distinctUntilChanged()
+    }
+
     suspend fun loadDay(epochDay: Long): DaySummary? {
         val entities = appUsageDao.getForDay(epochDay)
         if (entities.isEmpty()) return null
@@ -140,21 +183,27 @@ class UsageRepository @Inject constructor(
         appConfigDao.insert(AppConfigEntity(packageName, role))
     }
 
-    private fun AppUsageEntity.toDomain(configRole: AppRole?): AppUsage {
-        val effectiveRole = configRole ?: when {
+    private fun resolveRole(
+        isSystemApp: Boolean,
+        category: com.earnergy.domain.model.AppCategory,
+        configRole: AppRole?
+    ): AppRole {
+        return configRole ?: when {
             isSystemApp -> AppRole.IGNORED
             category == com.earnergy.domain.model.AppCategory.PRODUCTIVE -> AppRole.INVESTED
-            category == com.earnergy.domain.model.AppCategory.SOCIAL || 
+            category == com.earnergy.domain.model.AppCategory.SOCIAL ||
             category == com.earnergy.domain.model.AppCategory.ENTERTAINMENT -> AppRole.DRIFT
             else -> AppRole.IGNORED
         }
-        
+    }
+
+    private fun AppUsageEntity.toDomain(configRole: AppRole?): AppUsage {
         return AppUsage(
             packageName = packageName,
             displayName = displayName,
             category = category,
             totalForeground = totalSeconds.seconds,
-            role = effectiveRole,
+            role = resolveRole(isSystemApp, category, configRole),
             isSystemApp = isSystemApp
         )
     }
@@ -291,8 +340,8 @@ class UsageRepository @Inject constructor(
         type = com.earnergy.domain.model.SuggestionType.valueOf(type),
         title = title,
         description = description,
-        priority = com.earnergy.domain.model.Priority.MEDIUM, // Entity doesn't store priority
-        manualSteps = emptyList(), // Entity doesn't store steps
+        priority = com.earnergy.domain.model.Priority.valueOf(priority),
+        manualSteps = if (manualStepsJson.isEmpty()) emptyList() else manualStepsJson.split("|"),
         autoActionAvailable = false,
         timestamp = timestamp
     )
@@ -302,6 +351,8 @@ class UsageRepository @Inject constructor(
         type = type.name,
         title = title,
         description = description,
+        priority = priority.name,
+        manualStepsJson = manualSteps.joinToString("|"),
         timestamp = timestamp,
         dismissed = false,
         completed = false
