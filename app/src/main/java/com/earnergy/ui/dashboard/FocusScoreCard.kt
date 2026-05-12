@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -24,7 +26,7 @@ fun FocusScoreCard(
     metrics: FocusMetrics,
     modifier: Modifier = Modifier
 ) {
-    PremiumCard(
+    ElevatedCard(
         modifier = modifier
     ) {
         Column(
@@ -38,12 +40,12 @@ fun FocusScoreCard(
             ) {
                 Text(
                     text = "🧠",
-                    style = MaterialTheme.typography.headlineMedium
+                    style = MaterialTheme.typography.titleLarge
                 )
                 Text(
                     text = "Focus Score",
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.White
+                    fontWeight = FontWeight.Bold
                 )
             }
             
@@ -63,7 +65,7 @@ fun FocusScoreCard(
                 Text(
                     text = getFocusLabel(metrics.focusScore),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.7f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             
@@ -74,7 +76,7 @@ fun FocusScoreCard(
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp)),
                 color = getScoreColor(metrics.focusScore),
-                trackColor = Color.White.copy(alpha = 0.1f),
+                trackColor = MaterialTheme.colorScheme.surfaceVariant
             )
             
             // Stats Grid
@@ -96,29 +98,34 @@ fun FocusScoreCard(
                 )
             }
             
-            // Deep Work Section (if any deep work sessions exist)
+            // Deep Work Section
             if (metrics.deepWorkSessionCount > 0) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "🧘",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = "Deep Work: ${metrics.deepWorkSessionCount} sessions",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = Color.White
+                            text = "🧘",
+                            style = MaterialTheme.typography.titleMedium
                         )
-                        Text(
-                            text = "${metrics.totalDeepWorkMinutes} minutes of uninterrupted focus",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.6f)
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Deep Work: ${metrics.deepWorkSessionCount} sessions",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "${metrics.totalDeepWorkMinutes} minutes focused",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -135,13 +142,12 @@ private fun StatItem(
         Text(
             text = value,
             style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
+            fontWeight = FontWeight.Bold
         )
         Text(
             text = label,
             style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.6f)
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -149,17 +155,17 @@ private fun StatItem(
 @Composable
 private fun getScoreColor(score: Double): Color {
     return when {
-        score >= 80 -> Color(0xFF4CAF50) // Green
-        score >= 60 -> Color(0xFFFF9800) // Orange
-        else -> Color(0xFFF44336) // Red
+        score >= 80 -> MaterialTheme.colorScheme.primary
+        score >= 60 -> Color(0xFFFF9800) // Amber/Orange
+        else -> MaterialTheme.colorScheme.error
     }
 }
 
 private fun getFocusLabel(score: Double): String {
     return when {
-        score >= 90 -> "Deep Focus 🧘"
-        score >= 75 -> "Productive ⚡"
-        score >= 60 -> "Distracted 😐"
-        else -> "Fragmented 😵"
+        score >= 90 -> "Deep Focus"
+        score >= 75 -> "Productive"
+        score >= 60 -> "Distracted"
+        else -> "Fragmented"
     }
 }

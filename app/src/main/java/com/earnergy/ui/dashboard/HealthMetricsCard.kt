@@ -10,7 +10,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -27,7 +30,7 @@ fun HealthMetricsCard(
     onTakeBreak: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    PremiumCard(
+    ElevatedCard(
         modifier = modifier
     ) {
         Column(
@@ -41,12 +44,12 @@ fun HealthMetricsCard(
             ) {
                 Text(
                     text = "👁️",
-                    style = MaterialTheme.typography.headlineMedium
+                    style = MaterialTheme.typography.titleLarge
                 )
                 Text(
                     text = "Eye Health",
                     style = MaterialTheme.typography.titleMedium,
-                    color = Color.White
+                    fontWeight = FontWeight.Bold
                 )
             }
             
@@ -59,18 +62,17 @@ fun HealthMetricsCard(
                 Column {
                     Text(
                         text = "Eye Strain",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.7f)
+                        style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
                         text = getStrainLabel(metrics.eyeStrainScore),
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Text(
                     text = "${metrics.eyeStrainScore.toInt()}/100",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = getStrainColor(metrics.eyeStrainScore)
                 )
@@ -85,18 +87,17 @@ fun HealthMetricsCard(
                 Column {
                     Text(
                         text = "Breaks Taken",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.White.copy(alpha = 0.7f)
+                        style = MaterialTheme.typography.bodyMedium
                     )
                     Text(
                         text = "${metrics.breaksTaken} of ${metrics.breaksRecommended} recommended",
                         style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 Text(
                     text = "${(metrics.breakComplianceRate * 100).toInt()}%",
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = getComplianceColor(metrics.breakComplianceRate)
                 )
@@ -104,21 +105,17 @@ fun HealthMetricsCard(
             
             // Time Since Last Break
             if (metrics.continuousScreenTimeMinutes > 0) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            if (metrics.continuousScreenTimeMinutes >= 20) {
-                                Color(0xFFEF4444).copy(alpha = 0.2f)
-                            } else {
-                                Color(0xFF252B3A)
-                            }
-                        )
-                        .padding(12.dp)
+                Surface(
+                    color = if (metrics.continuousScreenTimeMinutes >= 20) {
+                        MaterialTheme.colorScheme.errorContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -130,13 +127,12 @@ fun HealthMetricsCard(
                                     "Time since last break"
                                 },
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White
+                                fontWeight = FontWeight.SemiBold
                             )
                             Text(
                                 text = "${metrics.continuousScreenTimeMinutes} minutes",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -145,25 +141,11 @@ fun HealthMetricsCard(
             
             // Take Break Button
             if (metrics.continuousScreenTimeMinutes >= 20) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                listOf(Color(0xFF10B981), Color(0xFF059669))
-                            )
-                        )
-                        .clickable(onClick = onTakeBreak)
-                        .padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center
+                Button(
+                    onClick = onTakeBreak,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = "Take a Break",
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Text("Take a Break")
                 }
             }
         }
@@ -173,18 +155,18 @@ fun HealthMetricsCard(
 @Composable
 private fun getStrainColor(score: Double): Color {
     return when {
-        score < 30 -> Color(0xFF10B981) // Green - Low strain
-        score < 60 -> Color(0xFFFBBF24) // Yellow - Moderate strain
-        else -> Color(0xFFEF4444) // Red - High strain
+        score < 30 -> MaterialTheme.colorScheme.primary
+        score < 60 -> Color(0xFFFF9800) // Amber
+        else -> MaterialTheme.colorScheme.error
     }
 }
 
 @Composable
 private fun getComplianceColor(rate: Double): Color {
     return when {
-        rate >= 0.8 -> Color(0xFF10B981) // Green - Good compliance
-        rate >= 0.5 -> Color(0xFFFBBF24) // Yellow - Moderate compliance
-        else -> Color(0xFFEF4444) // Red - Poor compliance
+        rate >= 0.8 -> MaterialTheme.colorScheme.primary
+        rate >= 0.5 -> Color(0xFFFF9800) // Amber
+        else -> MaterialTheme.colorScheme.error
     }
 }
 

@@ -24,10 +24,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.sharp.ArrowBack
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SearchBar
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,8 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
@@ -49,12 +55,14 @@ import android.graphics.drawable.Drawable
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.rememberAsyncImagePainter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppClassificationScreen(
     uiState: AppClassificationUiState,
@@ -76,134 +84,66 @@ fun AppClassificationScreen(
         filteredApps.partition { it.role == AppRole.IGNORED && !it.isSystemApp }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFF0A0E1A), Color(0xFF1A1F2E))
-                )
-            )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Classify Apps") },
+                navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Sharp.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.White
-                        )
-                    }
-                    Column {
-                        Text(
-                            text = "Classify Apps",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                        Text(
-                            text = "${unclassified.size} apps need classification",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.6f),
-                            modifier = Modifier.padding(start = 8.dp, top = 2.dp)
+                            contentDescription = "Back"
                         )
                     }
                 }
-            }
-
+            )
+        }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp)
+        ) {
             // Search Bar
-            PremiumCard {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = "Search",
-                        tint = Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.size(22.dp)
-                    )
-                    BasicTextField(
-                        value = uiState.searchQuery,
-                        onValueChange = onSearchQueryChanged,
-                        modifier = Modifier.weight(1f),
-                        textStyle = TextStyle(
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Normal
-                        ),
-                        cursorBrush = SolidColor(Color(0xFF6366F1)),
-                        decorationBox = { innerTextField ->
-                            if (uiState.searchQuery.isEmpty()) {
-                                Text(
-                                    text = "Search apps...",
-                                    color = Color.White.copy(alpha = 0.4f),
-                                    fontSize = 16.sp
-                                )
-                            }
-                            innerTextField()
-                        }
-                    )
-                }
-            }
+            SearchBar(
+                query = uiState.searchQuery,
+                onQueryChange = onSearchQueryChanged,
+                onSearch = {},
+                active = false,
+                onActiveChange = {},
+                placeholder = { Text("Search apps...") },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = SearchBarDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {}
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             when {
                 uiState.isLoading -> {
-                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(text = "Loading…", color = Color.White)
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(text = "Loading…")
                     }
                 }
                 uiState.errorMessage != null -> {
                     Text(
                         text = uiState.errorMessage,
-                        color = Color(0xFFF87171),
+                        color = MaterialTheme.colorScheme.error,
                         style = MaterialTheme.typography.bodyMedium
                     )
                 }
                 else -> {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
                         // Unclassified Section
                         if (unclassified.isNotEmpty()) {
                             item {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.padding(vertical = 8.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(6.dp)
-                                            .clip(RoundedCornerShape(3.dp))
-                                            .background(Color(0xFFFBBF24))
-                                    )
-                                    Text(
-                                        text = "Needs Classification",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color.White
-                                    )
-                                    Text(
-                                        text = "${unclassified.size}",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFFBBF24)
-                                    )
-                                }
+                                SectionHeader("Needs Classification", unclassified.size)
                             }
                             items(unclassified, key = { it.packageName }) { app ->
                                 AppCard(app, onRoleChanged)
@@ -214,30 +154,7 @@ fun AppClassificationScreen(
                         if (classified.isNotEmpty()) {
                             item {
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.padding(vertical = 8.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(6.dp)
-                                            .clip(RoundedCornerShape(3.dp))
-                                            .background(Color.White.copy(alpha = 0.5f))
-                                    )
-                                    Text(
-                                        text = "Classified",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color.White.copy(alpha = 0.7f)
-                                    )
-                                    Text(
-                                        text = "${classified.size}",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White.copy(alpha = 0.5f)
-                                    )
-                                }
+                                SectionHeader("Classified", classified.size, isGray = true)
                             }
                             items(classified, key = { it.packageName }) { app ->
                                 AppCard(app, onRoleChanged)
@@ -251,30 +168,29 @@ fun AppClassificationScreen(
 }
 
 @Composable
-private fun PremiumCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(16.dp),
-                ambientColor = Color.Black.copy(alpha = 0.3f),
-                spotColor = Color.Black.copy(alpha = 0.3f)
-            )
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF1E2433),
-                        Color(0xFF181D2A)
-                    )
-                )
-            )
+private fun SectionHeader(label: String, count: Int, isGray: Boolean = false) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(vertical = 8.dp)
     ) {
-        content()
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = if (isGray) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary
+        )
+        Surface(
+            color = if (isGray) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primaryContainer,
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+            )
+        }
     }
 }
 
@@ -283,38 +199,22 @@ private fun AppCard(
     app: AppClassificationItem,
     onRoleChanged: (packageName: String, newRole: AppRole) -> Unit
 ) {
-    PremiumCard {
+    OutlinedCard(
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // App Info Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                AppIcon(packageName = app.packageName, appName = app.appName)
-                
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = app.appName,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = formatMinutes(app.todayMinutes),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Normal,
-                        color = Color.White.copy(alpha = 0.5f)
-                    )
-                }
-            }
+            ListItem(
+                headlineContent = { Text(app.appName, fontWeight = FontWeight.SemiBold) },
+                supportingContent = { Text(formatMinutes(app.todayMinutes)) },
+                leadingContent = { AppIcon(packageName = app.packageName, appName = app.appName) },
+                colors = androidx.compose.material3.ListItemDefaults.colors(
+                    containerColor = Color.Transparent
+                )
+            )
             
-            // Role Buttons Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -322,21 +222,21 @@ private fun AppCard(
                 RoleButton(
                     label = "Invested",
                     isSelected = app.role == AppRole.INVESTED,
-                    selectedGradient = listOf(Color(0xFF10B981), Color(0xFF059669)),
+                    selectedColor = MaterialTheme.colorScheme.primary,
                     onClick = { onRoleChanged(app.packageName, AppRole.INVESTED) },
                     modifier = Modifier.weight(1f)
                 )
                 RoleButton(
                     label = "Drift",
                     isSelected = app.role == AppRole.DRIFT,
-                    selectedGradient = listOf(Color(0xFFEF4444), Color(0xFFDC2626)),
+                    selectedColor = MaterialTheme.colorScheme.error,
                     onClick = { onRoleChanged(app.packageName, AppRole.DRIFT) },
                     modifier = Modifier.weight(1f)
                 )
                 RoleButton(
                     label = "Ignore",
                     isSelected = app.role == AppRole.IGNORED,
-                    selectedGradient = listOf(Color(0xFF6B7280), Color(0xFF4B5563)),
+                    selectedColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     onClick = { onRoleChanged(app.packageName, AppRole.IGNORED) },
                     modifier = Modifier.weight(1f)
                 )
@@ -349,42 +249,27 @@ private fun AppCard(
 private fun RoleButton(
     label: String,
     isSelected: Boolean,
-    selectedGradient: List<Color>,
+    selectedColor: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.0f else 0.95f,
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f)
-    )
-    
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) Color.Transparent else Color(0xFF252B3A),
-        animationSpec = tween(durationMillis = 200)
-    )
-
-    Box(
+    Surface(
+        onClick = onClick,
+        color = if (isSelected) selectedColor else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+        shape = RoundedCornerShape(12.dp),
         modifier = modifier
-            .scale(scale)
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                if (isSelected) {
-                    Brush.horizontalGradient(selectedGradient)
-                } else {
-                    SolidColor(backgroundColor)
-                }
-            )
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 8.dp),
-        contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) Color.White else Color.White.copy(alpha = 0.6f),
-            fontSize = 13.sp
-        )
+        Box(
+            modifier = Modifier.padding(vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+            )
+        }
     }
 }
 
@@ -405,26 +290,22 @@ private fun AppIcon(packageName: String, appName: String) {
 
     Box(
         modifier = Modifier
-            .size(48.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF252B3A))
+            .size(40.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
     ) {
         if (icon != null) {
             Image(
                 painter = rememberAsyncImagePainter(icon),
                 contentDescription = "$appName icon",
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                modifier = Modifier.fillMaxSize()
             )
         } else {
             Icon(
                 imageVector = Icons.Default.Apps,
                 contentDescription = null,
-                tint = Color.White.copy(alpha = 0.4f),
-                modifier = Modifier
-                    .size(28.dp)
-                    .align(Alignment.Center)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp).align(Alignment.Center)
             )
         }
     }

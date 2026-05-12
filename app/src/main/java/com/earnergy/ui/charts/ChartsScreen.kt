@@ -10,109 +10,104 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.sharp.ArrowBack
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChartsScreen(
     uiState: ChartsUiState,
     onBack: () -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFF0A0E1A), Color(0xFF1A1F2E))
-                )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("Insights")
+                        Text(
+                            "Last 7 days",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Sharp.ArrowBack,
+                            contentDescription = "Back"
+                        )
+                    }
+                }
             )
-            .padding(20.dp)
-    ) {
+        }
+    ) { innerPadding ->
         Column(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Sharp.ArrowBack,
-                        contentDescription = "Back",
-                        tint = Color.White
-                    )
-                }
-                Column {
-                    Text(
-                        text = "Insights",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                    Text(
-                        text = "Last 7 days",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.6f),
-                        modifier = Modifier.padding(start = 8.dp, top = 2.dp)
-                    )
-                }
-            }
-            
             // Weekly Stats Card
-            PremiumCard {
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Column(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    modifier = Modifier.padding(20.dp)
+                    modifier = Modifier.padding(16.dp)
                 ) {
                     ChartRow(
                         title = "Invested",
                         hours = uiState.investedHoursLabel,
                         progress = uiState.investedRatio,
-                        color = Color(0xFF10B981)
+                        color = MaterialTheme.colorScheme.primary
                     )
                     ChartRow(
                         title = "Drift",
                         hours = uiState.driftHoursLabel,
                         progress = uiState.driftRatio,
-                        color = Color(0xFFEF4444)
+                        color = MaterialTheme.colorScheme.error
                     )
                     
                     if (uiState.isLoading) {
                         Text(
                             text = "Loading insights…",
-                            color = Color.White.copy(alpha = 0.7f),
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF252B3A))
-                                .padding(16.dp)
+                        Surface(
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Text(
                                 text = uiState.summary,
                                 style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White.copy(alpha = 0.9f)
+                                modifier = Modifier.padding(12.dp)
                             )
                         }
                     }
@@ -120,11 +115,13 @@ fun ChartsScreen(
             }
             
             // Focus Analytics Card
-            if (uiState.focusTrends.isNotEmpty()) {
-                PremiumCard {
+            if (uiState.focusTrends.isNotEmpty() || uiState.totalDeepWorkHours > 0) {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.padding(20.dp)
+                        modifier = Modifier.padding(16.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -132,17 +129,15 @@ fun ChartsScreen(
                         ) {
                             Text(
                                 text = "🧠",
-                                style = MaterialTheme.typography.headlineMedium
+                                style = MaterialTheme.typography.titleLarge
                             )
                             Text(
                                 text = "Focus Analytics",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                fontWeight = FontWeight.Bold
                             )
                         }
                         
-                        // Weekly Average Focus Score
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -151,7 +146,7 @@ fun ChartsScreen(
                             Text(
                                 text = "Weekly Avg Focus",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = "${uiState.weeklyAverageFocusScore.toInt()}/100",
@@ -161,34 +156,31 @@ fun ChartsScreen(
                             )
                         }
                         
-                        // Deep Work Summary
                         if (uiState.totalDeepWorkHours > 0) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFF252B3A))
-                                    .padding(16.dp)
+                            Surface(
+                                color = MaterialTheme.colorScheme.secondaryContainer,
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
+                                    modifier = Modifier.padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     Text(
                                         text = "🧘",
-                                        style = MaterialTheme.typography.headlineMedium
+                                        style = MaterialTheme.typography.titleLarge
                                     )
                                     Column {
                                         Text(
-                                            text = "${uiState.totalDeepWorkHours} hours of deep work",
+                                            text = "${uiState.totalDeepWorkHours}h deep work",
                                             style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = Color.White
+                                            fontWeight = FontWeight.Bold
                                         )
                                         Text(
-                                            text = "Uninterrupted focus sessions this week",
+                                            text = "Uninterrupted focus sessions",
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = Color.White.copy(alpha = 0.6f)
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer
                                         )
                                     }
                                 }
@@ -200,10 +192,12 @@ fun ChartsScreen(
             
             // Weekly Earnings Card
             if (uiState.dailyEarnings.isNotEmpty()) {
-                PremiumCard {
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     Column(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.padding(20.dp)
+                        modifier = Modifier.padding(16.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -211,17 +205,15 @@ fun ChartsScreen(
                         ) {
                             Text(
                                 text = "💰",
-                                style = MaterialTheme.typography.headlineMedium
+                                style = MaterialTheme.typography.titleLarge
                             )
                             Text(
                                 text = "Weekly Earnings",
                                 style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
+                                fontWeight = FontWeight.Bold
                             )
                         }
                         
-                        // Net Value
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -230,17 +222,16 @@ fun ChartsScreen(
                             Text(
                                 text = "Net Value",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.White.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
                                 text = formatMoney(uiState.weeklyNetValue),
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
-                                color = if (uiState.weeklyNetValue >= 0) Color(0xFF10B981) else Color(0xFFEF4444)
+                                color = if (uiState.weeklyNetValue >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                             )
                         }
                         
-                        // Simple daily bar chart
                         Column(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
@@ -251,6 +242,8 @@ fun ChartsScreen(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
@@ -258,37 +251,9 @@ fun ChartsScreen(
 @Composable
 private fun getFocusScoreColor(score: Double): Color {
     return when {
-        score >= 80 -> Color(0xFF4CAF50) // Green
-        score >= 60 -> Color(0xFFFF9800) // Orange
-        else -> Color(0xFFF44336) // Red
-    }
-}
-
-@Composable
-private fun PremiumCard(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(16.dp),
-                ambientColor = Color.Black.copy(alpha = 0.3f),
-                spotColor = Color.Black.copy(alpha = 0.3f)
-            )
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF1E2433),
-                        Color(0xFF181D2A)
-                    )
-                )
-            )
-    ) {
-        content()
+        score >= 80 -> MaterialTheme.colorScheme.primary
+        score >= 60 -> Color(0xFFFF9800) // Amber
+        else -> MaterialTheme.colorScheme.error
     }
 }
 
@@ -300,28 +265,15 @@ private fun ChartRow(title: String, hours: String, progress: Float, color: Color
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .height(8.dp)
-                        .fillMaxWidth(0.02f)
-                        .background(color, RoundedCornerShape(4.dp))
-                )
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White
-                )
-            }
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
             Text(
                 text = hours,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
+                fontWeight = FontWeight.Bold
             )
         }
         Box(
@@ -329,7 +281,7 @@ private fun ChartRow(title: String, hours: String, progress: Float, color: Color
                 .fillMaxWidth()
                 .height(8.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(Color.White.copy(alpha = 0.1f))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Box(
                 modifier = Modifier
@@ -350,33 +302,33 @@ private fun DailyEarningBar(day: com.earnergy.ui.charts.DailyEarning) {
     ) {
         Text(
             text = day.dayLabel,
-            style = MaterialTheme.typography.bodySmall,
-            color = Color.White.copy(alpha = 0.7f),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.width(32.dp)
         )
         Box(
             modifier = Modifier
                 .weight(1f)
-                .height(24.dp)
+                .height(20.dp)
                 .clip(RoundedCornerShape(4.dp))
-                .background(Color.White.copy(alpha = 0.1f))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
         ) {
-            val barColor = if (day.netValue >= 0) Color(0xFF10B981) else Color(0xFFEF4444)
-            val maxValue = 100.0 // Assume max $100 per day for scaling
+            val barColor = if (day.netValue >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+            val maxValue = 100.0
             val barWidth = (kotlin.math.abs(day.netValue) / maxValue).toFloat().coerceIn(0f, 1f)
             
             Box(
                 modifier = Modifier
                     .fillMaxWidth(barWidth)
-                    .height(24.dp)
+                    .height(20.dp)
                     .background(barColor, RoundedCornerShape(4.dp))
             )
         }
         Text(
             text = formatMoney(day.netValue),
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium,
-            color = if (day.netValue >= 0) Color(0xFF10B981) else Color(0xFFEF4444),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            color = if (day.netValue >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
             modifier = Modifier.width(56.dp)
         )
     }
