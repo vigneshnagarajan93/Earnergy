@@ -27,9 +27,12 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
 import androidx.savedstate.SavedStateRegistry
 import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 
 class EyeBreakOverlay(private val context: Context) : LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
 
@@ -78,10 +81,9 @@ class EyeBreakOverlay(private val context: Context) : LifecycleOwner, ViewModelS
         }
 
         // Essential for ComposeView in a Service/WindowManager
-        // Use fully qualified names to avoid ambiguity and ensure correct imports are used
-        androidx.lifecycle.ViewTreeLifecycleOwner.set(composeView, this)
-        androidx.lifecycle.viewmodel.setViewTreeViewModelStoreOwner(composeView, this)
-        androidx.savedstate.ViewTreeSavedStateRegistryOwner.set(composeView, this)
+        composeView.setViewTreeLifecycleOwner(this)
+        composeView.setViewTreeViewModelStoreOwner(this)
+        composeView.setViewTreeSavedStateRegistryOwner(this)
 
         overlayView = composeView
         windowManager.addView(overlayView, params)
