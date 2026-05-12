@@ -1,6 +1,7 @@
 package com.earnergy.core.data.usagestats
 
 import android.app.usage.UsageStatsManager
+import android.content.Intent
 import android.content.pm.PackageManager
 import com.earnergy.domain.model.AppCategory
 import android.app.usage.UsageEvents
@@ -24,6 +25,25 @@ class UsageStatsDataSource @Inject constructor(
     private val packageManager: PackageManager,
     private val clock: Clock = Clock.systemDefaultZone()
 ) {
+    fun getInstalledApps(): List<AppUsage> {
+        val intent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        val resolveInfos = packageManager.queryIntentActivities(intent, 0)
+        return resolveInfos.map { resolveInfo ->
+            val packageName = resolveInfo.activityInfo.packageName
+            val (displayName, isSystem) = resolveLabelAndSystemStatus(packageName)
+            val category = guessCategory(packageName, displayName)
+            AppUsage(
+                packageName = packageName,
+                displayName = displayName,
+                category = category,
+                totalForeground = 0.seconds,
+                isSystemApp = isSystem
+            )
+        }
+    }
+
     fun queryUsageForDay(epochDay: Long): UsageResult {
         val zone = clock.zone
         val date = LocalDate.ofEpochDay(epochDay)
