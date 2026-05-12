@@ -10,8 +10,18 @@ class SettingsRepository @Inject constructor(
     private val settingsDataStore: SettingsDataStore
 ) {
     val hourlyRate: Flow<Double> = settingsDataStore.hourlyRate
+    val healthFeaturesEnabled: Flow<Boolean> = settingsDataStore.healthFeaturesEnabled
+    val brightnessWarningEnabled: Flow<Boolean> = settingsDataStore.brightnessWarningEnabled
 
     suspend fun setHourlyRate(value: Double) {
         settingsDataStore.setHourlyRate(value)
+    }
+
+    suspend fun setHealthFeaturesEnabled(enabled: Boolean) {
+        settingsDataStore.setHealthFeaturesEnabled(enabled)
+    }
+
+    suspend fun setBrightnessWarningEnabled(enabled: Boolean) {
+        settingsDataStore.setBrightnessWarningEnabled(enabled)
     }
 }

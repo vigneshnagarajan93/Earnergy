@@ -14,7 +14,7 @@ import com.earnergy.core.data.local.converter.AppRoleConverter
         AppSwitchEventEntity::class,
         BreakEventEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(AppCategoryConverter::class, AppRoleConverter::class)

@@ -13,6 +13,8 @@ data class SuggestionEntity(
     val type: String, // SuggestionType.name
     val title: String,
     val description: String,
+    val priority: String, // Priority.name
+    val manualStepsJson: String, // JSON list of strings
     val timestamp: Long, // Epoch millis when suggestion was generated
     val dismissed: Boolean = false, // User swiped away
     val completed: Boolean = false // User acted on suggestion

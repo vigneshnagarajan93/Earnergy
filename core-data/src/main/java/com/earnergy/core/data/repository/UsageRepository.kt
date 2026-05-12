@@ -323,8 +323,8 @@ class UsageRepository @Inject constructor(
         type = com.earnergy.domain.model.SuggestionType.valueOf(type),
         title = title,
         description = description,
-        priority = com.earnergy.domain.model.Priority.MEDIUM, // Entity doesn't store priority
-        manualSteps = emptyList(), // Entity doesn't store steps
+        priority = com.earnergy.domain.model.Priority.valueOf(priority),
+        manualSteps = if (manualStepsJson.isEmpty()) emptyList() else manualStepsJson.split("|"),
         autoActionAvailable = false,
         timestamp = timestamp
     )
@@ -334,6 +334,8 @@ class UsageRepository @Inject constructor(
         type = type.name,
         title = title,
         description = description,
+        priority = priority.name,
+        manualStepsJson = manualSteps.joinToString("|"),
         timestamp = timestamp,
         dismissed = false,
         completed = false
