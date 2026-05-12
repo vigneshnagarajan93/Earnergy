@@ -11,5 +11,9 @@ data class FocusMetrics(
     val distractionIndex: Double, // 0-1, higher means more distracted
     val deepWorkSessionCount: Int = 0, // Number of deep work sessions (25+ min uninterrupted)
     val totalDeepWorkMinutes: Int = 0, // Total time spent in deep work
-    val peakProductivityHour: Int? = null // Hour of day (0-23) with best focus, null if no data
+    val peakProductivityHour: Int? = null, // Hour of day (0-23) with best focus, null if no data
+    val unlockCount: Int = 0,
+    val notificationLedUnlockCount: Int = 0,
+    val driftNotificationCount: Int = 0,
+    val appNotificationUnlocks: Map<String, Int> = emptyMap() // Map of package name to unlock count
 )

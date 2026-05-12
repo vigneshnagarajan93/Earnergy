@@ -49,4 +49,7 @@ object DatabaseModule {
     
     @Provides
     fun provideBreakEventDao(database: AppUsageDatabase): BreakEventDao = database.breakEventDao()
+
+    @Provides
+    fun provideUnlockEventDao(database: AppUsageDatabase): com.earnergy.core.data.local.UnlockEventDao = database.unlockEventDao()
 }

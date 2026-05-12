@@ -178,6 +178,42 @@ object SuggestionGenerator {
             )
         }
         
+        // Notification/Unlock based suggestions
+        if (focusMetrics != null) {
+            val totalUnlocks = focusMetrics.unlockCount
+            val notificationUnlocks = focusMetrics.notificationLedUnlockCount
+
+            if (totalUnlocks > 50) {
+                val notificationUnlockRatio = if (totalUnlocks > 0) notificationUnlocks.toDouble() / totalUnlocks else 0.0
+
+                if (notificationUnlockRatio > 0.4) {
+                    // Find the biggest offender
+                    val biggestOffender = focusMetrics.appNotificationUnlocks.maxByOrNull { it.value }
+                    val offenderDescription = if (biggestOffender != null) {
+                        " ${biggestOffender.key} is the biggest contributor with ${biggestOffender.value} unlocks."
+                    } else ""
+
+                    suggestions.add(
+                        Suggestion(
+                            id = UUID.randomUUID().toString(),
+                            type = SuggestionType.IMPROVE_FOCUS,
+                            title = "Mute Distracting Notifications",
+                            description = "Notifications are causing ${(notificationUnlockRatio * 100).toInt()}% of your phone unlocks today.$offenderDescription",
+                            priority = Priority.HIGH,
+                            manualSteps = listOf(
+                                "Go to App Settings",
+                                "Select the offending app",
+                                "Mute non-urgent notifications",
+                                "Or enable Do Not Disturb"
+                            ),
+                            autoActionAvailable = false,
+                            timestamp = now
+                        )
+                    )
+                }
+            }
+        }
+
         // Sort by priority (URGENT > HIGH > MEDIUM > LOW)
         return suggestions.sortedByDescending { it.priority.ordinal }
     }

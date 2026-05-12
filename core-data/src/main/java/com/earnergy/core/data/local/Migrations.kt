@@ -30,12 +30,25 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
 
 /**
  * Migration from database version 4 to 5.
- * Adds priority and manualStepsJson columns to suggestions table.
+ * Adds unlock_events table.
  */
 val MIGRATION_4_5 = object : Migration(4, 5) {
     override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL("ALTER TABLE suggestions ADD COLUMN priority TEXT NOT NULL DEFAULT 'MEDIUM'")
-        database.execSQL("ALTER TABLE suggestions ADD COLUMN manualStepsJson TEXT NOT NULL DEFAULT ''")
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS unlock_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                timestamp INTEGER NOT NULL,
+                dateEpochDay INTEGER NOT NULL,
+                wasNotificationLed INTEGER NOT NULL DEFAULT 0,
+                triggeringPackage TEXT
+            )
+        """)
+
+        database.execSQL("""
+            CREATE INDEX IF NOT EXISTS index_unlock_events_dateEpochDay
+            ON unlock_events(dateEpochDay)
+        """)
+
     }
 }
 

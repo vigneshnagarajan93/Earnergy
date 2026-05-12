@@ -16,7 +16,8 @@ import kotlin.time.Duration.Companion.seconds
 
 data class UsageResult(
     val usages: List<AppUsage>,
-    val automaticBreaks: List<BreakEventEntity>
+    val automaticBreaks: List<BreakEventEntity>,
+    val unlockEvents: List<com.earnergy.core.data.local.UnlockEventEntity> = emptyList()
 )
 
 @Singleton
@@ -62,6 +63,10 @@ class UsageStatsDataSource @Inject constructor(
         val automaticBreaks = mutableListOf<BreakEventEntity>()
         var lastPauseTime: Long = startTime
 
+        val unlockEvents = mutableListOf<com.earnergy.core.data.local.UnlockEventEntity>()
+        var lastNotificationTime: Long = 0
+        var lastNotificationPackage: String? = null
+
         val event = UsageEvents.Event()
         while (events.hasNextEvent()) {
             events.getNextEvent(event)
@@ -70,6 +75,22 @@ class UsageStatsDataSource @Inject constructor(
             val packageName = event.packageName
 
             when (event.eventType) {
+                28 -> { // UsageEvents.Event.KEYGUARD_HIDDEN (API 28)
+                    // Device unlocked. Check if it was preceded by a notification.
+                    val wasNotificationLed = (timestamp - lastNotificationTime) < 5000 // 5 seconds threshold
+                    unlockEvents.add(
+                        com.earnergy.core.data.local.UnlockEventEntity(
+                            timestamp = timestamp,
+                            dateEpochDay = epochDay,
+                            wasNotificationLed = wasNotificationLed,
+                            triggeringPackage = if (wasNotificationLed) lastNotificationPackage else null
+                        )
+                    )
+                }
+                12 -> { // UsageEvents.Event.NOTIFICATION_INTERRUPTION (API 12/28)
+                    lastNotificationTime = timestamp
+                    lastNotificationPackage = packageName
+                }
                 UsageEvents.Event.ACTIVITY_RESUMED -> {
                     // Calculate if there was a break before this resume
                     val timeSinceLastPause = timestamp - lastPauseTime
@@ -146,7 +167,8 @@ class UsageStatsDataSource @Inject constructor(
 
         return UsageResult(
             usages = appUsages,
-            automaticBreaks = automaticBreaks
+            automaticBreaks = automaticBreaks,
+            unlockEvents = unlockEvents
         )
     }
 

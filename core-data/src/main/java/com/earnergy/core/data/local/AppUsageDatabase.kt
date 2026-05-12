@@ -12,7 +12,8 @@ import com.earnergy.core.data.local.converter.AppRoleConverter
         AppConfigEntity::class,
         SuggestionEntity::class,
         AppSwitchEventEntity::class,
-        BreakEventEntity::class
+        BreakEventEntity::class,
+        UnlockEventEntity::class
     ],
     version = 5,
     exportSchema = false
@@ -24,4 +25,5 @@ abstract class AppUsageDatabase : RoomDatabase() {
     abstract fun suggestionDao(): SuggestionDao
     abstract fun appSwitchEventDao(): AppSwitchEventDao
     abstract fun breakEventDao(): BreakEventDao
+    abstract fun unlockEventDao(): UnlockEventDao
 }

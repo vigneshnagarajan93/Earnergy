@@ -39,6 +39,7 @@ class UsageRepository @Inject constructor(
     private val appConfigDao: AppConfigDao,
     private val appSwitchEventDao: AppSwitchEventDao,
     private val breakEventDao: BreakEventDao,
+    private val unlockEventDao: com.earnergy.core.data.local.UnlockEventDao,
     private val suggestionDao: SuggestionDao,
     private val settingsDataStore: SettingsDataStore,
     private val clock: Clock = Clock.systemDefaultZone()
@@ -60,6 +61,9 @@ class UsageRepository @Inject constructor(
 
         breakEventDao.deleteAutomaticBreaksForDay(todayEpochDay)
         breakEventDao.insertAll(usageResult.automaticBreaks)
+
+        unlockEventDao.deleteForDay(todayEpochDay)
+        unlockEventDao.insertAll(usageResult.unlockEvents)
     }
 
     fun observeDaySummary(epochDay: Long): Flow<DaySummary> {
@@ -149,12 +153,15 @@ class UsageRepository @Inject constructor(
         for (day in startEpochDay..endEpochDay) {
             val daySummary = loadDay(day)
             val switchEvents = appSwitchEventDao.getForDay(day)
+            val unlockEntities = unlockEventDao.getForDay(day)
             
-            if (daySummary != null && switchEvents.isNotEmpty()) {
+            if (daySummary != null) {
                 val switches = switchEvents.map { it.toDomain() }
+                val unlocks = unlockEntities.map { it.toDomain() }
                 val focusMetrics = FocusCalculator.computeFocusMetrics(
                     usages = daySummary.usages,
                     appSwitchEvents = switches,
+                    unlockEvents = unlocks,
                     dateEpochDay = day
                 )
                 
@@ -206,6 +213,13 @@ class UsageRepository @Inject constructor(
         fromPackage = fromPackage,
         toPackage = toPackage,
         dateEpochDay = dateEpochDay
+    )
+
+    private fun com.earnergy.core.data.local.UnlockEventEntity.toDomain() = com.earnergy.domain.model.UnlockEvent(
+        timestamp = timestamp,
+        dateEpochDay = dateEpochDay,
+        wasNotificationLed = wasNotificationLed,
+        triggeringPackage = triggeringPackage
     )
     
     /**
@@ -287,13 +301,16 @@ class UsageRepository @Inject constructor(
         val daySummary = loadDay(today)
         val healthMetrics = observeHealthMetrics(today).first()
         val switchEvents = appSwitchEventDao.getForDay(today)
+        val unlockEntities = unlockEventDao.getForDay(today)
         
         if (daySummary == null) return
         
         val switches = switchEvents.map { it.toDomain() }
+        val unlocks = unlockEntities.map { it.toDomain() }
         val focusMetrics = com.earnergy.domain.calculation.FocusCalculator.computeFocusMetrics(
             usages = daySummary.usages,
             appSwitchEvents = switches,
+            unlockEvents = unlocks,
             dateEpochDay = today
         )
         

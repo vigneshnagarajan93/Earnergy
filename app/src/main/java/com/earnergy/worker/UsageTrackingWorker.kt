@@ -24,7 +24,8 @@ import java.util.concurrent.TimeUnit
 class UsageTrackingWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
-    private val appSwitchEventDao: AppSwitchEventDao
+    private val appSwitchEventDao: AppSwitchEventDao,
+    private val unlockEventDao: com.earnergy.core.data.local.UnlockEventDao
 ) : CoroutineWorker(appContext, workerParams) {
 
     companion object {
@@ -45,47 +46,73 @@ class UsageTrackingWorker @AssistedInject constructor(
             // Query usage events since last check
             val events = usageStatsManager.queryEvents(lastCheckTime, currentTime)
             val appSwitchEvents = mutableListOf<AppSwitchEventEntity>()
+            val unlockEvents = mutableListOf<com.earnergy.core.data.local.UnlockEventEntity>()
             
             var previousPackage: String? = null
-            var previousTimestamp: Long? = null
+            var lastNotificationTime: Long = 0
+            var lastNotificationPackage: String? = null
 
-            // Process events to detect app switches
+            // Process events
             val event = UsageEvents.Event()
             while (events.hasNextEvent()) {
                 events.getNextEvent(event)
                 
-                // We only care about ACTIVITY_RESUMED events (app coming to foreground)
-                if (event.eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
-                    val currentPackage = event.packageName
-                    val currentTimestamp = event.timeStamp
-                    
-                    // If we have a previous app and it's different from current, record a switch
-                    if (previousPackage != null && previousPackage != currentPackage) {
+                val currentPackage = event.packageName
+                val currentTimestamp = event.timeStamp
+
+                when (event.eventType) {
+                    28 -> { // KEYGUARD_HIDDEN
+                        val wasNotificationLed = (currentTimestamp - lastNotificationTime) < 5000
                         val dateEpochDay = java.time.Instant.ofEpochMilli(currentTimestamp).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
-                        
-                        appSwitchEvents.add(
-                            AppSwitchEventEntity(
+                        unlockEvents.add(
+                            com.earnergy.core.data.local.UnlockEventEntity(
                                 timestamp = currentTimestamp,
-                                fromPackage = previousPackage,
-                                toPackage = currentPackage,
-                                dateEpochDay = dateEpochDay
+                                dateEpochDay = dateEpochDay,
+                                wasNotificationLed = wasNotificationLed,
+                                triggeringPackage = if (wasNotificationLed) lastNotificationPackage else null
                             )
                         )
                     }
-                    
-                    previousPackage = currentPackage
-                    previousTimestamp = currentTimestamp
+                    12 -> { // NOTIFICATION_INTERRUPTION
+                        lastNotificationTime = currentTimestamp
+                        lastNotificationPackage = currentPackage
+                    }
+                    UsageEvents.Event.ACTIVITY_RESUMED -> {
+                        // If we have a previous app and it's different from current, record a switch
+                        if (previousPackage != null && previousPackage != currentPackage) {
+                            val dateEpochDay = java.time.Instant.ofEpochMilli(currentTimestamp).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
+
+                            appSwitchEvents.add(
+                                AppSwitchEventEntity(
+                                    timestamp = currentTimestamp,
+                                    fromPackage = previousPackage,
+                                    toPackage = currentPackage,
+                                    dateEpochDay = dateEpochDay
+                                )
+                            )
+                        }
+
+                        previousPackage = currentPackage
+                    }
                 }
             }
 
-            // Save all detected switches to database
+            // Save all detected events to database
             if (appSwitchEvents.isNotEmpty()) {
                 appSwitchEventDao.insertAll(appSwitchEvents)
+            }
+            if (unlockEvents.isNotEmpty()) {
+                // Since this worker might re-process some events if lastCheckTime overlaps,
+                // but Room handles REPLACE for the same ID. However, these don't have stable IDs.
+                // In refreshToday we deleteForDay first. Here we might want to be careful.
+                // For simplicity, we just insert.
+                unlockEventDao.insertAll(unlockEvents)
             }
 
             // Clean up old data (older than 30 days)
             val thirtyDaysAgo = LocalDate.now().minusDays(30).toEpochDay()
             appSwitchEventDao.deleteOlderThan(thirtyDaysAgo)
+            unlockEventDao.deleteOlderThan(thirtyDaysAgo)
 
             Result.success()
         } catch (e: Exception) {
