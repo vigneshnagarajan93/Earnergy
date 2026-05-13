@@ -44,6 +44,7 @@ fun DashboardScreen(
     uiState: DashboardUiState,
     onOpenApps: () -> Unit,
     onOpenCharts: () -> Unit,
+    onOpenNotificationStats: () -> Unit,
     onOpenSettings: () -> Unit,
     onRefresh: () -> Unit,
     onTakeBreak: () -> Unit,
@@ -259,6 +260,7 @@ fun DashboardScreen(
 
                 NotificationInsightsCard(
                     metrics = uiState.focusMetrics,
+                    onOpenNotificationStats = onOpenNotificationStats,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

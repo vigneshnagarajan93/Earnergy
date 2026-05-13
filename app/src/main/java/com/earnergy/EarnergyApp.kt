@@ -35,6 +35,8 @@ import com.earnergy.core.ui.theme.EarnergyTheme
 import com.earnergy.ui.appclassification.AppRolesScreen
 import com.earnergy.ui.dashboard.DashboardScreen
 import com.earnergy.ui.dashboard.DashboardViewModel
+import com.earnergy.ui.dashboard.NotificationStatsScreen
+import com.earnergy.ui.dashboard.NotificationStatsViewModel
 import com.earnergy.ui.charts.InsightsScreen
 import com.earnergy.ui.settings.SettingsEvent
 import com.earnergy.ui.settings.SettingsScreen
@@ -77,6 +79,7 @@ fun EarnergyApp() {
                             uiState = uiState,
                             onOpenApps = { navController.navigate("apps") },
                             onOpenCharts = { navController.navigate("insights") },
+                            onOpenNotificationStats = { navController.navigate("notification_stats") },
                             onOpenSettings = { navController.navigate("settings") },
                             onRefresh = viewModel::refresh,
                             onTakeBreak = { viewModel.logBreak() },
@@ -96,6 +99,15 @@ fun EarnergyApp() {
                     }
                     composable("insights") {
                         InsightsScreen(onBack = { navController.popBackStack() })
+                    }
+                    composable("notification_stats") {
+                        val viewModel: NotificationStatsViewModel = hiltViewModel()
+                        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+                        NotificationStatsScreen(
+                            uiState = uiState,
+                            onSearchQueryChanged = viewModel::onSearchQueryChanged,
+                            onBack = { navController.popBackStack() }
+                        )
                     }
                     composable("settings") {
                         val viewModel: SettingsViewModel = hiltViewModel()

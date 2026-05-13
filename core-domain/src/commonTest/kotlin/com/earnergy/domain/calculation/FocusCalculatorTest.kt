@@ -55,5 +55,7 @@ class FocusCalculatorTest {
         )
 
         assertEquals(2, metrics.totalNotificationCount)
+        assertEquals(1, metrics.notificationCounts["pkg1"])
+        assertEquals(1, metrics.notificationCounts["pkg2"])
     }
 }
