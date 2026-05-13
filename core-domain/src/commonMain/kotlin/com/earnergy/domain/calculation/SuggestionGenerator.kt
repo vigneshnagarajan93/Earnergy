@@ -138,7 +138,7 @@ object SuggestionGenerator {
                         id = UUID.randomUUID().toString(),
                         type = SuggestionType.IMPROVE_FOCUS,
                         title = "Reduce Compulsive Unlocks",
-                        description = "You've had ${focusMetrics.compulsiveUnlockCount} compulsive unlocks today (unlocking shortly after locking). Try to be more intentional with phone use.",
+                        description = "You've had ${focusMetrics.compulsiveUnlockCount} compulsive unlocks today (unlocking again within 60s of a previous unlock). Try to be more intentional with phone use.",
                         priority = Priority.MEDIUM,
                         manualSteps = listOf(
                             "Leave your phone in another room",
