@@ -8,9 +8,9 @@ import kotlin.math.max
 object FocusCalculator {
     /**
      * Threshold for compulsive unlock detection.
-     * If an unlock occurs within this duration of the previous lock, it's considered compulsive.
+     * If an unlock cycle (unlock -> lock -> unlock) occurs within this duration, it's considered compulsive.
      */
-    private const val COMPULSIVE_UNLOCK_THRESHOLD_MS = 3 * 60 * 1000L // 3 minutes
+    private const val COMPULSIVE_UNLOCK_THRESHOLD_MS = 1 * 60 * 1000L // 1 minute
 
     fun computeFocusMetrics(
         usages: List<AppUsage>,
@@ -63,20 +63,19 @@ object FocusCalculator {
         val unlockCount = unlocksOnly.size
 
         var compulsiveUnlockCount = 0
-        var lastLockTimestamp: Long? = null
+        var lastUnlockTimestamp: Long? = null
 
         // unlockEvents are sorted by timestamp ASC
         for (event in unlockEvents) {
-            if (event.isLockEvent) {
-                lastLockTimestamp = event.timestamp
-            } else {
+            if (!event.isLockEvent) {
                 // It's an unlock
-                if (lastLockTimestamp != null) {
-                    val timeSinceLock = event.timestamp - lastLockTimestamp
-                    if (timeSinceLock < COMPULSIVE_UNLOCK_THRESHOLD_MS) {
+                if (lastUnlockTimestamp != null) {
+                    val flowDuration = event.timestamp - lastUnlockTimestamp
+                    if (flowDuration < COMPULSIVE_UNLOCK_THRESHOLD_MS) {
                         compulsiveUnlockCount++
                     }
                 }
+                lastUnlockTimestamp = event.timestamp
             }
         }
 

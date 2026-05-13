@@ -19,9 +19,9 @@ class FocusCalculatorTest {
         val unlockEvents = listOf(
             UnlockEvent(now, 0, false),           // 1. Initial unlock
             UnlockEvent(now + 1000, 0, true),      // 2. Lock after 1s
-            UnlockEvent(now + 5000, 0, false),     // 3. Unlock after 4s (Compulsive!)
-            UnlockEvent(now + 10000, 0, true),     // 4. Lock
-            UnlockEvent(now + 500000, 0, false)    // 5. Unlock after 490s (Not compulsive)
+            UnlockEvent(now + 30000, 0, false),    // 3. Unlock after 30s (Compulsive flow: 1 to 3 is 30s < 60s)
+            UnlockEvent(now + 40000, 0, true),     // 4. Lock
+            UnlockEvent(now + 100000, 0, false)    // 5. Unlock (Flow: 3 to 5 is 70s > 60s, Not compulsive)
         )
 
         val metrics = FocusCalculator.computeFocusMetrics(

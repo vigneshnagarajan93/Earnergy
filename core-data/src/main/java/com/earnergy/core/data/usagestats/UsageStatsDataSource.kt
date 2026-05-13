@@ -69,6 +69,7 @@ class UsageStatsDataSource @Inject constructor(
 
         var lastUnlockTime: Long = 0
         var lastLockTime: Long = 0
+        var lastRecordedWasLock: Boolean? = null
 
         val event = UsageEvents.Event()
         while (events.hasNextEvent()) {
@@ -79,8 +80,8 @@ class UsageStatsDataSource @Inject constructor(
 
             when (event.eventType) {
                 15, 18 -> { // SCREEN_INTERACTIVE, KEYGUARD_HIDDEN
-                    // De-duplicate: ignore if we just recorded an unlock within 500ms
-                    if (timestamp - lastUnlockTime > 500) {
+                    // De-duplicate: ignore if we just recorded an unlock
+                    if (lastRecordedWasLock != false) {
                         unlockEvents.add(
                             com.earnergy.core.data.local.UnlockEventEntity(
                                 timestamp = timestamp,
@@ -89,11 +90,12 @@ class UsageStatsDataSource @Inject constructor(
                             )
                         )
                         lastUnlockTime = timestamp
+                        lastRecordedWasLock = false
                     }
                 }
                 16, 17 -> { // SCREEN_NON_INTERACTIVE, KEYGUARD_SHOWN
-                    // De-duplicate: ignore if we just recorded a lock within 500ms
-                    if (timestamp - lastLockTime > 500) {
+                    // De-duplicate: ignore if we just recorded a lock
+                    if (lastRecordedWasLock != true) {
                         unlockEvents.add(
                             com.earnergy.core.data.local.UnlockEventEntity(
                                 timestamp = timestamp,
@@ -102,6 +104,7 @@ class UsageStatsDataSource @Inject constructor(
                             )
                         )
                         lastLockTime = timestamp
+                        lastRecordedWasLock = true
                     }
                 }
                 12 -> { // NOTIFICATION_INTERRUPTION
