@@ -42,7 +42,7 @@ class UsageRepository @Inject constructor(
     private val unlockEventDao: com.earnergy.core.data.local.UnlockEventDao,
     private val notificationEventDao: com.earnergy.core.data.local.NotificationEventDao,
     private val suggestionDao: SuggestionDao,
-    private val settingsDataStore: SettingsDataStore,
+    val settingsDataStore: SettingsDataStore,
     private val clock: Clock = Clock.systemDefaultZone()
 ) {
     private val DEFAULT_DRIFT_PACKAGES = setOf(

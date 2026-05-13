@@ -4,8 +4,11 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.Currency
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,6 +19,15 @@ class SettingsDataStore @Inject constructor(
     val hourlyRate: Flow<Double> = dataStore.data
         .map { preferences ->
             preferences[HOURLY_RATE_KEY] ?: DEFAULT_HOURLY_RATE
+        }
+
+    val currencyCode: Flow<String> = dataStore.data
+        .map { preferences ->
+            preferences[CURRENCY_CODE_KEY] ?: try {
+                Currency.getInstance(Locale.getDefault()).currencyCode
+            } catch (e: Exception) {
+                "USD"
+            }
         }
 
     val healthFeaturesEnabled: Flow<Boolean> = dataStore.data
@@ -34,6 +46,12 @@ class SettingsDataStore @Inject constructor(
         }
     }
 
+    suspend fun setCurrencyCode(code: String) {
+        dataStore.edit { prefs ->
+            prefs[CURRENCY_CODE_KEY] = code
+        }
+    }
+
     suspend fun setHealthFeaturesEnabled(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[HEALTH_FEATURES_ENABLED_KEY] = enabled
@@ -48,7 +66,8 @@ class SettingsDataStore @Inject constructor(
 
     companion object {
         const val DATA_STORE_NAME = "earnergy_settings"
-        private val HOURLY_RATE_KEY = androidx.datastore.preferences.core.doublePreferencesKey("hourly_rate")
+        private val HOURLY_RATE_KEY = doublePreferencesKey("hourly_rate")
+        private val CURRENCY_CODE_KEY = stringPreferencesKey("currency_code")
         private val HEALTH_FEATURES_ENABLED_KEY = androidx.datastore.preferences.core.booleanPreferencesKey("health_features_enabled")
         private val BRIGHTNESS_WARNING_ENABLED_KEY = androidx.datastore.preferences.core.booleanPreferencesKey("brightness_warning_enabled")
         private const val DEFAULT_HOURLY_RATE = 25.0

@@ -37,6 +37,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.earnergy.ui.common.GlassSurface
 import com.earnergy.ui.common.ProgressRing
+import com.earnergy.util.CurrencyUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -187,16 +188,17 @@ fun DashboardScreen(
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    val netValueStr = CurrencyUtils.formatCurrency(netValue.toDouble(), uiState.currencyCode)
                     Text(
-                        text = formatMoney(netValue.toDouble()),
+                        text = netValueStr,
                         style = MaterialTheme.typography.displayMedium,
                         fontWeight = FontWeight.Bold,
                         color = if (isPositive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                     )
                     Text(
                         text = when {
-                            netValue > 0 -> "You're up ${formatMoney(netValue.toDouble())} today"
-                            netValue < 0 -> "Drift is costing you ${formatMoney(-netValue.toDouble())}"
+                            netValue > 0 -> "You're up $netValueStr today"
+                            netValue < 0 -> "Drift is costing you ${CurrencyUtils.formatCurrency(-netValue.toDouble(), uiState.currencyCode)}"
                             else -> if (hasPermission) "Start tracking your time" else "Grant permission to start"
                         },
                         style = MaterialTheme.typography.bodyMedium,
@@ -309,6 +311,3 @@ private fun formatMinutes(minutes: Int): String {
         "${remaining}m"
     }
 }
-
-private fun formatMoney(value: Double): String =
-    "$" + String.format("%.2f", value)

@@ -24,8 +24,8 @@ object EarningCalculator {
         return MoneyImpact(
             productiveSeconds = productiveSeconds,
             passiveSeconds = passiveSeconds,
-            potentialEarningsUsd = potentialEarnings,
-            potentialLossUsd = potentialLoss
+            potentialEarnings = potentialEarnings,
+            potentialLoss = potentialLoss
         )
     }
 
