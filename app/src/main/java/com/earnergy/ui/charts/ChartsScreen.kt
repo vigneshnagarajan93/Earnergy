@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.earnergy.util.CurrencyUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -225,7 +226,7 @@ fun ChartsScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             Text(
-                                text = formatMoney(uiState.weeklyNetValue),
+                                text = CurrencyUtils.formatCurrency(uiState.weeklyNetValue, uiState.currencyCode),
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = if (uiState.weeklyNetValue >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
@@ -236,7 +237,7 @@ fun ChartsScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             uiState.dailyEarnings.forEach { day ->
-                                DailyEarningBar(day)
+                                DailyEarningBar(day, uiState.currencyCode)
                             }
                         }
                     }
@@ -294,7 +295,7 @@ private fun ChartRow(title: String, hours: String, progress: Float, color: Color
 }
 
 @Composable
-private fun DailyEarningBar(day: com.earnergy.ui.charts.DailyEarning) {
+private fun DailyEarningBar(day: com.earnergy.ui.charts.DailyEarning, currencyCode: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -325,15 +326,11 @@ private fun DailyEarningBar(day: com.earnergy.ui.charts.DailyEarning) {
             )
         }
         Text(
-            text = formatMoney(day.netValue),
+            text = CurrencyUtils.formatCurrency(day.netValue, currencyCode),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
             color = if (day.netValue >= 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
-            modifier = Modifier.width(56.dp)
+            modifier = Modifier.width(64.dp)
         )
     }
-}
-
-private fun formatMoney(value: Double): String {
-    return "$" + String.format("%.2f", value)
 }

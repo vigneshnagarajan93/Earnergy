@@ -9,6 +9,7 @@ data class DashboardUiState(
     val valueOfInvestedTime: Double = 0.0,
     val costOfDriftTime: Double = 0.0,
     val netValue: Double = 0.0,
+    val currencyCode: String = "USD",
     val focusMetrics: FocusMetrics? = null,
     val healthMetrics: HealthMetrics? = null,
     val suggestions: List<com.earnergy.domain.model.Suggestion> = emptyList(),

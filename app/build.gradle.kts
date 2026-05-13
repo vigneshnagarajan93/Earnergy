@@ -95,4 +95,6 @@ dependencies {
 
     debugImplementation(libs.compose.ui.tooling)
     implementation(libs.coil.compose)
+
+    testImplementation("junit:junit:4.13.2")
 }

@@ -12,6 +12,9 @@ import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -25,7 +28,18 @@ class ChartsViewModel @Inject constructor(
     val uiState: StateFlow<ChartsUiState> = _uiState.asStateFlow()
     
     init {
-        loadWeeklyData()
+        observeSettings()
+    }
+
+    private fun observeSettings() {
+        viewModelScope.launch {
+            combine(
+                usageRepository.settingsDataStore.hourlyRate,
+                usageRepository.settingsDataStore.currencyCode
+            ) { rate, code -> rate to code }.collectLatest {
+                loadWeeklyData()
+            }
+        }
     }
     
     fun refresh() {
@@ -38,7 +52,8 @@ class ChartsViewModel @Inject constructor(
             try {
                 val today = LocalDate.now(clock)
                 val weekStart = today.minusDays(6) // Last 7 days including today
-                
+                val currencyCode = usageRepository.settingsDataStore.currencyCode.first()
+
                 var totalInvestedSeconds = 0L
                 var totalDriftSeconds = 0L
                 var totalEarnings = 0.0
@@ -54,16 +69,16 @@ class ChartsViewModel @Inject constructor(
                         val impact = EarningCalculator.computeImpact(summary)
                         totalInvestedSeconds += impact.productiveSeconds
                         totalDriftSeconds += impact.passiveSeconds
-                        totalEarnings += impact.potentialEarningsUsd
-                        totalDriftCost += impact.potentialLossUsd
+                        totalEarnings += impact.potentialEarnings
+                        totalDriftCost += impact.potentialLoss
                         
                         // Add daily data
                         dailyEarnings.add(
                             DailyEarning(
                                 dayLabel = date.dayOfWeek.name.take(3), // Mon, Tue, etc.
-                                netValue = impact.potentialEarningsUsd - impact.potentialLossUsd,
-                                invested = impact.potentialEarningsUsd,
-                                drift = impact.potentialLossUsd
+                                netValue = impact.potentialEarnings - impact.potentialLoss,
+                                invested = impact.potentialEarnings,
+                                drift = impact.potentialLoss
                             )
                         )
                     } else {
@@ -126,6 +141,7 @@ class ChartsViewModel @Inject constructor(
                         totalWeeklyEarnings = totalEarnings,
                         totalWeeklyDrift = totalDriftCost,
                         weeklyNetValue = weeklyNetValue,
+                        currencyCode = currencyCode,
                         dailyEarnings = dailyEarnings,
                         isLoading = false
                     )
@@ -158,6 +174,7 @@ data class ChartsUiState(
     val totalWeeklyEarnings: Double = 0.0,
     val totalWeeklyDrift: Double = 0.0,
     val weeklyNetValue: Double = 0.0,
+    val currencyCode: String = "USD",
     val dailyEarnings: List<DailyEarning> = emptyList()
 )
 

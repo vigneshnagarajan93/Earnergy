@@ -39,6 +39,8 @@ class DashboardViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(DashboardUiState(isLoading = true))
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
 
+    private var currentCurrencyCode = "USD"
+
     init {
         observeData()
         refreshNow()
@@ -80,7 +82,8 @@ class DashboardViewModel @Inject constructor(
                     unlockEventDao.observeForDay(epochDay),
                     usageRepository.observeHealthMetrics(epochDay),
                     usageRepository.observeActiveSuggestions(),
-                    notificationEventDao.observeForDay(epochDay)
+                    notificationEventDao.observeForDay(epochDay),
+                    usageRepository.settingsDataStore.currencyCode
                 ) { args: Array<*> ->
                     val summary = args[0] as DaySummary
                     val switchEntities = args[1] as List<AppSwitchEventEntity>
@@ -88,6 +91,8 @@ class DashboardViewModel @Inject constructor(
                     val healthMetrics = args[3] as com.earnergy.domain.model.HealthMetrics
                     val suggestions = args[4] as List<com.earnergy.domain.model.Suggestion>
                     val notificationEntities = args[5] as List<com.earnergy.core.data.local.NotificationEventEntity>
+                    val currencyCode = args[6] as String
+                    currentCurrencyCode = currencyCode
 
                     val switches = switchEntities.map { it.toDomain() }
                     val unlocks = unlockEntities.map { it.toDomain() }
@@ -160,9 +165,10 @@ class DashboardViewModel @Inject constructor(
         return copy(
             investedMinutes = (impact.productiveSeconds / 60).toInt(),
             driftMinutes = (impact.passiveSeconds / 60).toInt(),
-            valueOfInvestedTime = impact.potentialEarningsUsd,
-            costOfDriftTime = impact.potentialLossUsd,
-            netValue = impact.potentialEarningsUsd - impact.potentialLossUsd
+            valueOfInvestedTime = impact.potentialEarnings,
+            costOfDriftTime = impact.potentialLoss,
+            netValue = impact.potentialEarnings - impact.potentialLoss,
+            currencyCode = currentCurrencyCode
         )
     }
 }

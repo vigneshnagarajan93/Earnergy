@@ -122,9 +122,12 @@ fun EarnergyApp() {
                         SettingsScreen(
                             uiState = uiState,
                             onHourlyRateChanged = viewModel::onHourlyRateChanged,
+                            onCurrencyChanged = viewModel::onCurrencyChanged,
+                            onCurrencySearchQueryChanged = viewModel::onCurrencySearchQueryChanged,
                             onHealthFeaturesToggled = viewModel::onHealthFeaturesToggled,
                             onBrightnessWarningToggled = viewModel::onBrightnessWarningToggled,
                             onSaveClicked = viewModel::onSaveClicked,
+                            onDismissConfirmation = viewModel::onDismissConfirmation,
                             onBack = { navController.popBackStack() }
                         )
                     }
