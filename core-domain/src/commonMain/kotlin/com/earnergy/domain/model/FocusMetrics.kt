@@ -15,5 +15,6 @@ data class FocusMetrics(
     val unlockCount: Int = 0,
     val compulsiveUnlockCount: Int = 0,
     val driftNotificationCount: Int = 0,
-    val totalNotificationCount: Int = 0
+    val totalNotificationCount: Int = 0,
+    val notificationCounts: Map<String, Int> = emptyMap()
 )

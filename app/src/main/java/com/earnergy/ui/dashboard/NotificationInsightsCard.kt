@@ -24,6 +24,7 @@ import com.earnergy.domain.model.FocusMetrics
 @Composable
 fun NotificationInsightsCard(
     metrics: FocusMetrics,
+    onOpenNotificationStats: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showCompulsiveExplanation by remember { mutableStateOf(false) }
@@ -83,6 +84,7 @@ fun NotificationInsightsCard(
                 InsightItem(
                     label = "Total Notifications",
                     value = metrics.totalNotificationCount.toString(),
+                    onClick = onOpenNotificationStats,
                     modifier = Modifier.weight(1f)
                 )
             }

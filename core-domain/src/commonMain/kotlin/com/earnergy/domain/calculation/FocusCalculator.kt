@@ -79,6 +79,11 @@ object FocusCalculator {
             }
         }
 
+        // Notification counts per package
+        val notificationCounts = notificationEvents
+            .groupBy { it.packageName }
+            .mapValues { it.value.size }
+
         // Drift notification count
         val driftPackageNames = usages
             .filter { it.role == com.earnergy.domain.model.AppRole.DRIFT }
@@ -111,7 +116,8 @@ object FocusCalculator {
             unlockCount = unlockCount,
             compulsiveUnlockCount = compulsiveUnlockCount,
             driftNotificationCount = driftNotificationCount,
-            totalNotificationCount = totalNotificationCount
+            totalNotificationCount = totalNotificationCount,
+            notificationCounts = notificationCounts
         )
     }
     
