@@ -36,6 +36,9 @@ class HealthMonitorService : Service(), SensorEventListener {
     @Inject
     lateinit var usageRepository: UsageRepository
 
+    @Inject
+    lateinit var eyeHealthManager: EyeHealthManager
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var eyeBreakOverlay: EyeBreakOverlay? = null
     private lateinit var sensorManager: SensorManager
@@ -54,6 +57,7 @@ class HealthMonitorService : Service(), SensorEventListener {
 
         registerLightSensor()
         observeHealthMetrics()
+        eyeHealthManager.start()
     }
 
     private fun registerLightSensor() {
@@ -168,6 +172,7 @@ class HealthMonitorService : Service(), SensorEventListener {
     override fun onDestroy() {
         super.onDestroy()
         sensorManager.unregisterListener(this)
+        eyeHealthManager.stop()
         serviceScope.cancel()
     }
 
