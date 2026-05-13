@@ -1,21 +1,24 @@
 package com.earnergy.ui.dashboard
 
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.earnergy.domain.model.HealthMetrics
+import com.earnergy.domain.model.EyeHealthStatus
 
 @Composable
 fun HealthMetricsCard(
@@ -35,117 +39,108 @@ fun HealthMetricsCard(
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Title
+            // Status Header
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Column {
+                    Text(
+                        text = "EYE HEALTH STATUS",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = metrics.status.label,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Black,
+                        color = getStatusColor(metrics.status)
+                    )
+                }
                 Text(
                     text = "👁️",
-                    style = MaterialTheme.typography.titleLarge
-                )
-                Text(
-                    text = "Eye Health",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    style = MaterialTheme.typography.displaySmall
                 )
             }
-            
-            // Eye Strain Score
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Eye Strain",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = getStrainLabel(metrics.eyeStrainScore),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Text(
-                    text = "${metrics.eyeStrainScore.toInt()}/100",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = getStrainColor(metrics.eyeStrainScore)
-                )
-            }
-            
-            // Break Compliance
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "Breaks Taken",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = "${metrics.breaksTaken} of ${metrics.breaksRecommended} recommended",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Text(
-                    text = "${(metrics.breakComplianceRate * 100).toInt()}%",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = getComplianceColor(metrics.breakComplianceRate)
-                )
-            }
-            
-            // Time Since Last Break
-            if (metrics.continuousScreenTimeMinutes > 0) {
-                Surface(
-                    color = if (metrics.continuousScreenTimeMinutes >= 20) {
-                        MaterialTheme.colorScheme.errorContainer
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+
+            // Insight Text
+            Text(
+                text = metrics.status.message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            // Strain Progress Bar
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = if (metrics.continuousScreenTimeMinutes >= 20) {
-                                    "⚠️ Time for a break!"
-                                } else {
-                                    "Time since last break"
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                text = "${metrics.continuousScreenTimeMinutes} minutes",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+                    Text(
+                        text = "Current Session",
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                    Text(
+                        text = "${metrics.currentSessionMinutes}m",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                val progress by animateFloatAsState(
+                    targetValue = (metrics.currentSessionMinutes / 60f).coerceIn(0f, 1f),
+                    label = "strainProgress"
+                )
+
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(12.dp)
+                        .clip(RoundedCornerShape(6.dp)),
+                    color = getStrainProgressColor(metrics.currentSessionMinutes),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("0m", style = MaterialTheme.typography.labelSmall)
+                    Text("20m", style = MaterialTheme.typography.labelSmall)
+                    Text("40m", style = MaterialTheme.typography.labelSmall)
+                    Text("60m+", style = MaterialTheme.typography.labelSmall)
                 }
             }
-            
-            // Take Break Button
-            if (metrics.continuousScreenTimeMinutes >= 20) {
+
+            // Secondary Metrics
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                MetricSmall(
+                    label = "Daily Strain",
+                    value = "${metrics.dailyStrainMinutes}m",
+                    modifier = Modifier.weight(1f)
+                )
+                MetricSmall(
+                    label = "Max Session",
+                    value = "${metrics.maxContinuousSessionMinutes}m",
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // Action Button
+            if (metrics.currentSessionMinutes >= 20) {
                 Button(
                     onClick = onTakeBreak,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Take a Break")
+                    Text("Take a 20s Break")
                 }
             }
         }
@@ -153,27 +148,49 @@ fun HealthMetricsCard(
 }
 
 @Composable
-private fun getStrainColor(score: Double): Color {
-    return when {
-        score < 30 -> MaterialTheme.colorScheme.primary
-        score < 60 -> Color(0xFFFF9800) // Amber
-        else -> MaterialTheme.colorScheme.error
+private fun MetricSmall(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 
 @Composable
-private fun getComplianceColor(rate: Double): Color {
-    return when {
-        rate >= 0.8 -> MaterialTheme.colorScheme.primary
-        rate >= 0.5 -> Color(0xFFFF9800) // Amber
-        else -> MaterialTheme.colorScheme.error
+private fun getStatusColor(status: EyeHealthStatus): Color {
+    return when (status) {
+        EyeHealthStatus.EXCELLENT -> Color(0xFF4CAF50) // Green
+        EyeHealthStatus.GOOD -> Color(0xFF8BC34A)      // Light Green
+        EyeHealthStatus.FAIR -> Color(0xFFFF9800)      // Orange
+        EyeHealthStatus.POOR -> Color(0xFFF44336)      // Red
     }
 }
 
-private fun getStrainLabel(score: Double): String {
+@Composable
+private fun getStrainProgressColor(minutes: Int): Color {
     return when {
-        score < 30 -> "Low strain - Keep it up!"
-        score < 60 -> "Moderate strain"
-        else -> "High strain - Take a break!"
+        minutes <= 20 -> Color(0xFF4CAF50) // Green
+        minutes <= 40 -> Color(0xFFFFEB3B) // Yellow
+        else -> Color(0xFFF44336)          // Red
     }
 }

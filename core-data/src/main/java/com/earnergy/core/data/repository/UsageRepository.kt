@@ -268,15 +268,18 @@ class UsageRepository @Inject constructor(
         return combine(
             appUsageDao.observeForDay(epochDay),
             appConfigDao.observeAll(),
-            breakEventDao.observeForDay(epochDay)
-        ) { usageEntities, configEntities, breakEntities ->
+            breakEventDao.observeForDay(epochDay),
+            unlockEventDao.observeForDay(epochDay)
+        ) { usageEntities, configEntities, breakEntities, unlockEntities ->
             val configMap = configEntities.associate { it.packageName to it.role }
             val usages = usageEntities.map { it.toDomain(configMap[it.packageName]) }
             val breaks = breakEntities.map { it.toDomain() }
+            val unlocks = unlockEntities.map { it.toDomain() }
             
             HealthCalculator.computeHealthMetrics(
                 usages = usages,
                 breakEvents = breaks,
+                unlockEvents = unlocks,
                 dateEpochDay = epochDay,
                 currentTimeMillis = System.currentTimeMillis()
             )

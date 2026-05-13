@@ -3,6 +3,9 @@ package com.earnergy.domain.calculation
 import com.earnergy.domain.model.AppUsage
 import com.earnergy.domain.model.BreakEvent
 import com.earnergy.domain.model.HealthMetrics
+import com.earnergy.domain.model.EyeHealthStatus
+import com.earnergy.domain.model.UnlockEvent
+import kotlin.math.max
 import kotlin.math.min
 
 object HealthCalculator {
@@ -10,6 +13,7 @@ object HealthCalculator {
     private const val BREAK_INTERVAL_MINUTES = 20 // 20-20-20 rule
     private const val EVENING_HOUR_START = 20 // 8 PM
     private const val NIGHT_HOUR_START = 22 // 10 PM
+    private const val SESSION_RESET_THRESHOLD_MS = 60 * 1000L // 60 seconds
     
     /**
      * Compute health metrics for a given day.
@@ -17,94 +21,112 @@ object HealthCalculator {
     fun computeHealthMetrics(
         usages: List<AppUsage>,
         breakEvents: List<BreakEvent>,
+        unlockEvents: List<UnlockEvent>,
         dateEpochDay: Long,
         currentTimeMillis: Long
     ): HealthMetrics {
         val totalScreenTimeMinutes = usages.sumOf { it.totalForeground.inWholeMinutes }.toInt()
         
-        if (totalScreenTimeMinutes == 0) {
-            return HealthMetrics(
-                eyeStrainScore = 0.0,
-                totalScreenTimeMinutes = 0,
-                continuousScreenTimeMinutes = 0,
-                breaksRecommended = 0,
-                breaksTaken = 0,
-                breakComplianceRate = 0.0,
-                lastBreakTimestamp = null
-            )
+        val sessions = reconstructSessions(unlockEvents, currentTimeMillis)
+        val maxContinuousSessionMinutes = if (sessions.isEmpty()) 0 else (sessions.maxOf { it.getDuration(currentTimeMillis) } / 60000).toInt()
+        val currentSessionMinutes = if (sessions.isEmpty()) 0 else {
+            val lastSession = sessions.last()
+            if (lastSession.isActive(currentTimeMillis)) {
+                (lastSession.getDuration(currentTimeMillis) / 60000).toInt()
+            } else 0
         }
-        
-        // Calculate breaks recommended (one per 20 minutes)
+
+        val dailyStrainMinutes = sessions.sumOf { session ->
+            val durationMinutes = (session.getDuration(currentTimeMillis) / 60000).toInt()
+            max(0, durationMinutes - 20)
+        }
+
+        val status = determineStatus(maxContinuousSessionMinutes, totalScreenTimeMinutes)
+
+        // Legacy/Compatibility fields
         val breaksRecommended = (totalScreenTimeMinutes / BREAK_INTERVAL_MINUTES).coerceAtLeast(1)
         val breaksTaken = breakEvents.size
-        
-        // Calculate break compliance rate
         val breakComplianceRate = if (breaksRecommended > 0) {
             (breaksTaken.toDouble() / breaksRecommended).coerceIn(0.0, 1.0)
         } else 0.0
-        
-        // Calculate continuous screen time since last break
         val lastBreakEvent = breakEvents.maxByOrNull { it.timestamp }
-        val continuousScreenTimeMinutes = if (lastBreakEvent != null) {
-            val endOfLastBreak = lastBreakEvent.timestamp + (lastBreakEvent.durationSeconds * 1000L)
-            val timeSinceBreakMinutes = ((currentTimeMillis - endOfLastBreak) / 60000).toInt()
-            timeSinceBreakMinutes.coerceIn(0, totalScreenTimeMinutes)
-        } else {
-            totalScreenTimeMinutes
+        
+        // eyeStrainScore is kept for compatibility but we can derive it from status or keep a simple version
+        val eyeStrainScore = when (status) {
+            EyeHealthStatus.EXCELLENT -> 10.0
+            EyeHealthStatus.GOOD -> 35.0
+            EyeHealthStatus.FAIR -> 65.0
+            EyeHealthStatus.POOR -> 90.0
         }
-        
-        // Calculate eye strain score
-        val eyeStrainScore = calculateEyeStrainScore(
-            totalScreenTimeMinutes = totalScreenTimeMinutes,
-            continuousScreenTimeMinutes = continuousScreenTimeMinutes,
-            breakComplianceRate = breakComplianceRate,
-            currentTimeMillis = currentTimeMillis
-        )
-        
+
         return HealthMetrics(
             eyeStrainScore = eyeStrainScore,
+            status = status,
+            dailyStrainMinutes = dailyStrainMinutes,
+            maxContinuousSessionMinutes = maxContinuousSessionMinutes,
+            currentSessionMinutes = currentSessionMinutes,
             totalScreenTimeMinutes = totalScreenTimeMinutes,
-            continuousScreenTimeMinutes = continuousScreenTimeMinutes,
+            continuousScreenTimeMinutes = currentSessionMinutes, // Refined mapping
             breaksRecommended = breaksRecommended,
             breaksTaken = breaksTaken,
             breakComplianceRate = breakComplianceRate,
             lastBreakTimestamp = lastBreakEvent?.timestamp
         )
     }
-    
-    /**
-     * Calculate eye strain score (0-100).
-     * Higher score = more strain.
-     */
-    private fun calculateEyeStrainScore(
-        totalScreenTimeMinutes: Int,
-        continuousScreenTimeMinutes: Int,
-        breakComplianceRate: Double,
-        currentTimeMillis: Long
-    ): Double {
-        // Base score from total screen time (0-40 points)
-        // 0 min = 0, 120 min = 20, 240+ min = 40
-        val baseScore = min(totalScreenTimeMinutes / 6.0, 40.0)
+
+    private data class Session(val startTime: Long, var endTime: Long?) {
+        val durationMs: Long get() = (endTime ?: startTime) - startTime
+        fun getDuration(now: Long): Long = (endTime ?: now) - startTime
+        fun isActive(now: Long): Boolean = endTime == null || (now - endTime!!) < SESSION_RESET_THRESHOLD_MS
+    }
+
+    private fun reconstructSessions(unlockEvents: List<UnlockEvent>, currentTimeMillis: Long): List<Session> {
+        if (unlockEvents.isEmpty()) return emptyList()
         
-        // Penalty for continuous screen time without breaks (0-30 points)
-        // 0 min = 0, 20 min = 10, 40 min = 20, 60+ min = 30
-        val continuousTimePenalty = min(continuousScreenTimeMinutes / 2.0, 30.0)
-        
-        // Penalty for poor break compliance (0-20 points)
-        // 100% compliance = 0, 50% = 10, 0% = 20
-        val breakCompliancePenalty = (1.0 - breakComplianceRate) * 20.0
-        
-        // Time of day multiplier
-        val hourOfDay = getHourOfDay(currentTimeMillis)
-        val timeMultiplier = when {
-            hourOfDay >= NIGHT_HOUR_START -> 1.3 // Night: 30% increase
-            hourOfDay >= EVENING_HOUR_START -> 1.15 // Evening: 15% increase
-            else -> 1.0 // Day: no increase
+        val sortedEvents = unlockEvents.sortedBy { it.timestamp }
+        val sessions = mutableListOf<Session>()
+        var currentSession: Session? = null
+
+        for (event in sortedEvents) {
+            if (!event.isLockEvent) { // Unlock
+                if (currentSession == null) {
+                    currentSession = Session(event.timestamp, null)
+                } else {
+                    val gap = event.timestamp - (currentSession.endTime ?: event.timestamp)
+                    if (gap >= SESSION_RESET_THRESHOLD_MS) {
+                        sessions.add(currentSession)
+                        currentSession = Session(event.timestamp, null)
+                    } else {
+                        // Resume session (timer resumes from previous value is effectively continuing the session)
+                        currentSession.endTime = null
+                    }
+                }
+            } else { // Lock
+                currentSession?.endTime = event.timestamp
+            }
         }
-        
-        val rawScore = (baseScore + continuousTimePenalty + breakCompliancePenalty) * timeMultiplier
-        
-        return rawScore.coerceIn(0.0, 100.0)
+
+        currentSession?.let { sessions.add(it) }
+        return sessions
+    }
+
+    private fun determineStatus(maxContinuousMinutes: Int, totalDailyMinutes: Int): EyeHealthStatus {
+        val continuousRating = when {
+            maxContinuousMinutes <= 20 -> EyeHealthStatus.EXCELLENT
+            maxContinuousMinutes <= 40 -> EyeHealthStatus.GOOD
+            maxContinuousMinutes <= 60 -> EyeHealthStatus.FAIR
+            else -> EyeHealthStatus.POOR
+        }
+
+        val totalUsageRating = when {
+            totalDailyMinutes <= 120 -> EyeHealthStatus.EXCELLENT // <= 2 hours
+            totalDailyMinutes <= 180 -> EyeHealthStatus.GOOD      // 2.1 - 3 hours
+            totalDailyMinutes <= 240 -> EyeHealthStatus.FAIR      // 3.1 - 4 hours
+            else -> EyeHealthStatus.POOR                         // > 4 hours
+        }
+
+        // Lower-bound wins (stricter rating)
+        return if (continuousRating.ordinal > totalUsageRating.ordinal) continuousRating else totalUsageRating
     }
     
     /**
