@@ -6,6 +6,12 @@ import com.earnergy.domain.model.FocusMetrics
 import kotlin.math.max
 
 object FocusCalculator {
+    /**
+     * Threshold for compulsive unlock detection.
+     * If an unlock occurs within this duration of the previous lock, it's considered compulsive.
+     */
+    private const val COMPULSIVE_UNLOCK_THRESHOLD_MS = 3 * 60 * 1000L // 3 minutes
+
     fun computeFocusMetrics(
         usages: List<AppUsage>,
         appSwitchEvents: List<AppSwitchEvent>,
@@ -53,14 +59,26 @@ object FocusCalculator {
         val peakProductivityHour = calculatePeakProductivityHour(appSwitchEvents)
         
         // Calculate unlock metrics
-        val unlockCount = unlockEvents.size
-        val notificationLedUnlockCount = unlockEvents.count { it.wasNotificationLed }
+        val unlocksOnly = unlockEvents.filter { !it.isLockEvent }
+        val unlockCount = unlocksOnly.size
 
-        // Count notification unlocks per app
-        val appNotificationUnlocks = unlockEvents
-            .filter { it.wasNotificationLed && it.triggeringPackage != null }
-            .groupBy { it.triggeringPackage!! }
-            .mapValues { it.value.size }
+        var compulsiveUnlockCount = 0
+        var lastLockTimestamp: Long? = null
+
+        // unlockEvents are sorted by timestamp ASC
+        for (event in unlockEvents) {
+            if (event.isLockEvent) {
+                lastLockTimestamp = event.timestamp
+            } else {
+                // It's an unlock
+                if (lastLockTimestamp != null) {
+                    val timeSinceLock = event.timestamp - lastLockTimestamp
+                    if (timeSinceLock < COMPULSIVE_UNLOCK_THRESHOLD_MS) {
+                        compulsiveUnlockCount++
+                    }
+                }
+            }
+        }
 
         // Drift notification count
         val driftPackageNames = usages
@@ -70,6 +88,8 @@ object FocusCalculator {
 
         val driftNotificationCount = notificationEvents
             .count { it.packageName in driftPackageNames }
+
+        val totalNotificationCount = notificationEvents.size
 
         // Calculate focus score
         // Base score from distraction index
@@ -90,9 +110,9 @@ object FocusCalculator {
             totalDeepWorkMinutes = totalDeepWorkMinutes,
             peakProductivityHour = peakProductivityHour,
             unlockCount = unlockCount,
-            notificationLedUnlockCount = notificationLedUnlockCount,
+            compulsiveUnlockCount = compulsiveUnlockCount,
             driftNotificationCount = driftNotificationCount,
-            appNotificationUnlocks = appNotificationUnlocks
+            totalNotificationCount = totalNotificationCount
         )
     }
     
@@ -120,9 +140,6 @@ object FocusCalculator {
                 next.timestamp - current.timestamp
             } else {
                 // Last session - estimate based on total usage or just default to 0 if unknown
-                // For simplicity and safety, we'll cap it or use a default if we can't determine end
-                // A better approach might be to look at the total usage for that app
-                // But here we are just looking at switch intervals
                 0L 
             }
             

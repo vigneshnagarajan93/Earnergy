@@ -5,7 +5,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /**
- * Entity for tracking device unlock events.
+ * Entity for tracking device unlock and lock events.
  */
 @Entity(
     tableName = "unlock_events",
@@ -15,6 +15,5 @@ data class UnlockEventEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val timestamp: Long,
     val dateEpochDay: Long,
-    val wasNotificationLed: Boolean,
-    val triggeringPackage: String? = null
+    val isLockEvent: Boolean
 )

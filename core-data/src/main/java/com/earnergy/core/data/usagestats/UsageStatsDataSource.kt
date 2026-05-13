@@ -66,12 +66,9 @@ class UsageStatsDataSource @Inject constructor(
 
         val unlockEvents = mutableListOf<com.earnergy.core.data.local.UnlockEventEntity>()
         val notificationEvents = mutableListOf<com.earnergy.core.data.local.NotificationEventEntity>()
-        var lastNotificationTime: Long = 0
-        var lastNotificationPackage: String? = null
 
-        // Track recent notifications for improved unlock heuristic
-        // Map of package name to last notification timestamp
-        val recentNotifications = mutableMapOf<String, Long>()
+        var lastUnlockTime: Long = 0
+        var lastLockTime: Long = 0
 
         val event = UsageEvents.Event()
         while (events.hasNextEvent()) {
@@ -81,22 +78,33 @@ class UsageStatsDataSource @Inject constructor(
             val packageName = event.packageName
 
             when (event.eventType) {
-                28 -> { // UsageEvents.Event.KEYGUARD_HIDDEN (API 28)
-                    // Device unlocked. Check if it was preceded by a notification.
-                    val wasNotificationLed = (timestamp - lastNotificationTime) < 5000 // 5 seconds threshold
-                    unlockEvents.add(
-                        com.earnergy.core.data.local.UnlockEventEntity(
-                            timestamp = timestamp,
-                            dateEpochDay = epochDay,
-                            wasNotificationLed = wasNotificationLed,
-                            triggeringPackage = if (wasNotificationLed) lastNotificationPackage else null
+                15, 18 -> { // SCREEN_INTERACTIVE, KEYGUARD_HIDDEN
+                    // De-duplicate: ignore if we just recorded an unlock within 500ms
+                    if (timestamp - lastUnlockTime > 500) {
+                        unlockEvents.add(
+                            com.earnergy.core.data.local.UnlockEventEntity(
+                                timestamp = timestamp,
+                                dateEpochDay = epochDay,
+                                isLockEvent = false
+                            )
                         )
-                    )
+                        lastUnlockTime = timestamp
+                    }
                 }
-                12 -> { // UsageEvents.Event.NOTIFICATION_INTERRUPTION (API 12/28)
-                    lastNotificationTime = timestamp
-                    lastNotificationPackage = packageName
-                    recentNotifications[packageName] = timestamp
+                16, 17 -> { // SCREEN_NON_INTERACTIVE, KEYGUARD_SHOWN
+                    // De-duplicate: ignore if we just recorded a lock within 500ms
+                    if (timestamp - lastLockTime > 500) {
+                        unlockEvents.add(
+                            com.earnergy.core.data.local.UnlockEventEntity(
+                                timestamp = timestamp,
+                                dateEpochDay = epochDay,
+                                isLockEvent = true
+                            )
+                        )
+                        lastLockTime = timestamp
+                    }
+                }
+                12 -> { // NOTIFICATION_INTERRUPTION
                     notificationEvents.add(
                         com.earnergy.core.data.local.NotificationEventEntity(
                             timestamp = timestamp,
@@ -106,23 +114,6 @@ class UsageStatsDataSource @Inject constructor(
                     )
                 }
                 UsageEvents.Event.ACTIVITY_RESUMED -> {
-                    // Improved unlock heuristic: if app resumed very shortly after an unlock,
-                    // and it had a recent notification, count it as a notification-led unlock
-                    val lastUnlock = unlockEvents.lastOrNull()
-                    if (lastUnlock != null && !lastUnlock.wasNotificationLed) {
-                        val timeSinceUnlock = timestamp - lastUnlock.timestamp
-                        if (timeSinceUnlock in 0..1500) { // Resumed within 1.5s of unlock
-                            val lastAppNotif = recentNotifications[packageName] ?: 0L
-                            if ((timestamp - lastAppNotif) < 10 * 60 * 1000L) { // Notif within last 10 mins
-                                // Retroactively mark the unlock as notification led
-                                val updatedUnlock = lastUnlock.copy(
-                                    wasNotificationLed = true,
-                                    triggeringPackage = packageName
-                                )
-                                unlockEvents[unlockEvents.size - 1] = updatedUnlock
-                            }
-                        }
-                    }
 
                     // Calculate if there was a break before this resume
                     val timeSinceLastPause = timestamp - lastPauseTime

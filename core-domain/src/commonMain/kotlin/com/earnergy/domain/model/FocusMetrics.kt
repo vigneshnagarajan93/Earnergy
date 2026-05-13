@@ -13,7 +13,7 @@ data class FocusMetrics(
     val totalDeepWorkMinutes: Int = 0, // Total time spent in deep work
     val peakProductivityHour: Int? = null, // Hour of day (0-23) with best focus, null if no data
     val unlockCount: Int = 0,
-    val notificationLedUnlockCount: Int = 0,
+    val compulsiveUnlockCount: Int = 0,
     val driftNotificationCount: Int = 0,
-    val appNotificationUnlocks: Map<String, Int> = emptyMap() // Map of package name to unlock count
+    val totalNotificationCount: Int = 0
 )

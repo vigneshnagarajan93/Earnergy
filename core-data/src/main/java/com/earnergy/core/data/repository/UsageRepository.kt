@@ -252,8 +252,7 @@ class UsageRepository @Inject constructor(
     private fun com.earnergy.core.data.local.UnlockEventEntity.toDomain() = com.earnergy.domain.model.UnlockEvent(
         timestamp = timestamp,
         dateEpochDay = dateEpochDay,
-        wasNotificationLed = wasNotificationLed,
-        triggeringPackage = triggeringPackage
+        isLockEvent = isLockEvent
     )
 
     private fun com.earnergy.core.data.local.NotificationEventEntity.toDomain() = com.earnergy.domain.model.NotificationEvent(
