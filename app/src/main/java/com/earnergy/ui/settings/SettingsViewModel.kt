@@ -84,6 +84,10 @@ class SettingsViewModel @Inject constructor(
         _uiState.update { it.copy(currencyCode = code) }
     }
 
+    fun onCurrencySearchQueryChanged(query: String) {
+        _uiState.update { it.copy(currencySearchQuery = query) }
+    }
+
     fun onHealthFeaturesToggled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.setHealthFeaturesEnabled(enabled)
