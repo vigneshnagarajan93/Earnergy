@@ -25,7 +25,7 @@ fun NotificationInsightsCard(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Notification Insights",
+                text = "Device Interaction Insights",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -40,28 +40,26 @@ fun NotificationInsightsCard(
                     modifier = Modifier.weight(1f)
                 )
                 InsightItem(
-                    label = "Notif. Unlocks",
-                    value = metrics.notificationLedUnlockCount.toString(),
+                    label = "Compulsive Unlocks",
+                    value = metrics.compulsiveUnlockCount.toString(),
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            InsightItem(
-                label = "Drift Notifications",
-                value = metrics.driftNotificationCount.toString(),
-                description = "Total notifications from Drift apps",
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            if (metrics.appNotificationUnlocks.isNotEmpty()) {
-                val biggestOffender = metrics.appNotificationUnlocks.maxByOrNull { it.value }
-                if (biggestOffender != null) {
-                    Text(
-                        text = "Most distracting: ${biggestOffender.key} (${biggestOffender.value} unlocks)",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                InsightItem(
+                    label = "Drift Notifications",
+                    value = metrics.driftNotificationCount.toString(),
+                    modifier = Modifier.weight(1f)
+                )
+                InsightItem(
+                    label = "Total Notifications",
+                    value = metrics.totalNotificationCount.toString(),
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }

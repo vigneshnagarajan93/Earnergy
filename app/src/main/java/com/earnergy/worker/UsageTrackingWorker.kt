@@ -49,8 +49,8 @@ class UsageTrackingWorker @AssistedInject constructor(
             val unlockEvents = mutableListOf<com.earnergy.core.data.local.UnlockEventEntity>()
             
             var previousPackage: String? = null
-            var lastNotificationTime: Long = 0
-            var lastNotificationPackage: String? = null
+            var lastUnlockTime: Long = 0
+            var lastLockTime: Long = 0
 
             // Process events
             val event = UsageEvents.Event()
@@ -61,21 +61,31 @@ class UsageTrackingWorker @AssistedInject constructor(
                 val currentTimestamp = event.timeStamp
 
                 when (event.eventType) {
-                    28 -> { // KEYGUARD_HIDDEN
-                        val wasNotificationLed = (currentTimestamp - lastNotificationTime) < 5000
-                        val dateEpochDay = java.time.Instant.ofEpochMilli(currentTimestamp).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
-                        unlockEvents.add(
-                            com.earnergy.core.data.local.UnlockEventEntity(
-                                timestamp = currentTimestamp,
-                                dateEpochDay = dateEpochDay,
-                                wasNotificationLed = wasNotificationLed,
-                                triggeringPackage = if (wasNotificationLed) lastNotificationPackage else null
+                    15, 18 -> { // SCREEN_INTERACTIVE, KEYGUARD_HIDDEN
+                        if (currentTimestamp - lastUnlockTime > 500) {
+                            val dateEpochDay = java.time.Instant.ofEpochMilli(currentTimestamp).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
+                            unlockEvents.add(
+                                com.earnergy.core.data.local.UnlockEventEntity(
+                                    timestamp = currentTimestamp,
+                                    dateEpochDay = dateEpochDay,
+                                    isLockEvent = false
+                                )
                             )
-                        )
+                            lastUnlockTime = currentTimestamp
+                        }
                     }
-                    12 -> { // NOTIFICATION_INTERRUPTION
-                        lastNotificationTime = currentTimestamp
-                        lastNotificationPackage = currentPackage
+                    16, 17 -> { // SCREEN_NON_INTERACTIVE, KEYGUARD_SHOWN
+                        if (currentTimestamp - lastLockTime > 500) {
+                            val dateEpochDay = java.time.Instant.ofEpochMilli(currentTimestamp).atZone(ZoneId.systemDefault()).toLocalDate().toEpochDay()
+                            unlockEvents.add(
+                                com.earnergy.core.data.local.UnlockEventEntity(
+                                    timestamp = currentTimestamp,
+                                    dateEpochDay = dateEpochDay,
+                                    isLockEvent = true
+                                )
+                            )
+                            lastLockTime = currentTimestamp
+                        }
                     }
                     UsageEvents.Event.ACTIVITY_RESUMED -> {
                         // If we have a previous app and it's different from current, record a switch

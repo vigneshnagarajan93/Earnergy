@@ -16,7 +16,7 @@ import com.earnergy.core.data.local.converter.AppRoleConverter
         UnlockEventEntity::class,
         NotificationEventEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(AppCategoryConverter::class, AppRoleConverter::class)

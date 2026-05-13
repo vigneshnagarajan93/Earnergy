@@ -29,6 +29,42 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
 }
 
 /**
+ * Migration from database version 6 to 7.
+ * Updates unlock_events table to remove notification fields and add isLockEvent.
+ */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(database: SupportSQLiteDatabase) {
+        // Create new table
+        database.execSQL("""
+            CREATE TABLE IF NOT EXISTS unlock_events_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                timestamp INTEGER NOT NULL,
+                dateEpochDay INTEGER NOT NULL,
+                isLockEvent INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+
+        // Copy data
+        database.execSQL("""
+            INSERT INTO unlock_events_new (id, timestamp, dateEpochDay, isLockEvent)
+            SELECT id, timestamp, dateEpochDay, 0 FROM unlock_events
+        """)
+
+        // Drop old table
+        database.execSQL("DROP TABLE unlock_events")
+
+        // Rename new table
+        database.execSQL("ALTER TABLE unlock_events_new RENAME TO unlock_events")
+
+        // Recreate index
+        database.execSQL("""
+            CREATE INDEX IF NOT EXISTS index_unlock_events_dateEpochDay
+            ON unlock_events(dateEpochDay)
+        """)
+    }
+}
+
+/**
  * Migration from database version 5 to 6.
  * Adds notification_events table.
  */

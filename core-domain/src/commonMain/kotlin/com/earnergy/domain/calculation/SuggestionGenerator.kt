@@ -12,6 +12,8 @@ import java.util.UUID
  */
 object SuggestionGenerator {
     
+    private const val COMPULSIVE_UNLOCK_SUGGESTION_THRESHOLD = 15
+
     /**
      * Generate suggestions based on current metrics.
      * Returns a list of suggestions ordered by priority.
@@ -128,6 +130,26 @@ object SuggestionGenerator {
                     )
                 )
             }
+
+            // Compulsive Unlocks Statistic suggestion
+            if (focusMetrics.compulsiveUnlockCount > COMPULSIVE_UNLOCK_SUGGESTION_THRESHOLD) {
+                suggestions.add(
+                    Suggestion(
+                        id = UUID.randomUUID().toString(),
+                        type = SuggestionType.IMPROVE_FOCUS,
+                        title = "Reduce Compulsive Unlocks",
+                        description = "You've had ${focusMetrics.compulsiveUnlockCount} compulsive unlocks today (unlocking shortly after locking). Try to be more intentional with phone use.",
+                        priority = Priority.MEDIUM,
+                        manualSteps = listOf(
+                            "Leave your phone in another room",
+                            "Use a physical watch to check the time",
+                            "Practice 1 minute of mindfulness before picking up your phone"
+                        ),
+                        autoActionAvailable = false,
+                        timestamp = now
+                    )
+                )
+            }
         }
         
         // Drift time suggestions
@@ -178,42 +200,6 @@ object SuggestionGenerator {
             )
         }
         
-        // Notification/Unlock based suggestions
-        if (focusMetrics != null) {
-            val totalUnlocks = focusMetrics.unlockCount
-            val notificationUnlocks = focusMetrics.notificationLedUnlockCount
-
-            if (totalUnlocks > 50) {
-                val notificationUnlockRatio = if (totalUnlocks > 0) notificationUnlocks.toDouble() / totalUnlocks else 0.0
-
-                if (notificationUnlockRatio > 0.4) {
-                    // Find the biggest offender
-                    val biggestOffender = focusMetrics.appNotificationUnlocks.maxByOrNull { it.value }
-                    val offenderDescription = if (biggestOffender != null) {
-                        " ${biggestOffender.key} is the biggest contributor with ${biggestOffender.value} unlocks."
-                    } else ""
-
-                    suggestions.add(
-                        Suggestion(
-                            id = UUID.randomUUID().toString(),
-                            type = SuggestionType.IMPROVE_FOCUS,
-                            title = "Mute Distracting Notifications",
-                            description = "Notifications are causing ${(notificationUnlockRatio * 100).toInt()}% of your phone unlocks today.$offenderDescription",
-                            priority = Priority.HIGH,
-                            manualSteps = listOf(
-                                "Go to App Settings",
-                                "Select the offending app",
-                                "Mute non-urgent notifications",
-                                "Or enable Do Not Disturb"
-                            ),
-                            autoActionAvailable = false,
-                            timestamp = now
-                        )
-                    )
-                }
-            }
-        }
-
         // Sort by priority (URGENT > HIGH > MEDIUM > LOW)
         return suggestions.sortedByDescending { it.priority.ordinal }
     }
